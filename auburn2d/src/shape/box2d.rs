@@ -3,7 +3,7 @@ use crate::property::support::Support;
 
 use super::Shape;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Component))]
 /// A 2D box (rectangle) defined by its half-size (extents).
 ///

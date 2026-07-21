@@ -10,6 +10,12 @@ pub enum Shape2d {
     Box2d(Box2d),
 }
 
+impl Default for Shape2d {
+    fn default() -> Self {
+        Self::Point(Point)
+    }
+}
+
 impl Shape2d {
     pub fn point() -> Self {
         Self::Point(Point)

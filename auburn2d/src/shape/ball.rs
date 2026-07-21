@@ -2,7 +2,7 @@ use super::Shape;
 use crate::Vec2;
 use crate::property::support::Support;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 #[cfg_attr(feature = "bevy", derive(bevy::prelude::Component))]
 /// A ball (circle) shape defined by a radius.
 ///

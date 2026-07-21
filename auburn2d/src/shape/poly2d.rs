@@ -32,6 +32,12 @@ pub struct Poly2d {
     pub points: Arc<Vec<Vec2>>,
 }
 
+impl Default for Poly2d {
+    fn default() -> Self {
+        Self::new(Arc::new(Vec::new()))
+    }
+}
+
 impl From<Box2d> for Poly2d {
     fn from(box2d: Box2d) -> Self {
         let points = Arc::new(vec![
