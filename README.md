@@ -1,5 +1,8 @@
 # auburn
 
+[![CI](https://github.com/lkurcak/auburn/actions/workflows/rust.yml/badge.svg)](https://github.com/lkurcak/auburn/actions/workflows/rust.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A Cargo workspace for fast and simple collision detection and physics.
 
 ## Crates
