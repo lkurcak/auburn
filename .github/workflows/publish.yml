@@ -4,22 +4,6 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
-  workflow_dispatch:
-    inputs:
-      crate:
-        description: "Crate to publish"
-        required: true
-        default: "all"
-        type: choice
-        options:
-          - all
-          - auburn2d
-          - auburn3d
-      dry_run:
-        description: "Dry run (no upload)"
-        required: true
-        default: true
-        type: boolean
 
 permissions:
   contents: read
@@ -32,19 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set publish parameters
-        id: params
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "crate=all" >> "$GITHUB_OUTPUT"
-            echo "dry_run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "crate=${{ inputs.crate }}" >> "$GITHUB_OUTPUT"
-            echo "dry_run=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Validate tag and workspace version
-        if: github.event_name == 'push'
         run: |
           echo "${{ github.ref_name }}" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'
           WORKSPACE_VERSION=$(grep -E '^\s*version\s*=' Cargo.toml | head -1 | sed -E 's/.*=\s*"([^"]+)".*/\1/')
@@ -55,22 +27,12 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Authenticate to crates.io
-        if: ${{ steps.params.outputs.dry_run == 'false' }}
         id: auth
         uses: rust-lang/crates-io-auth-action@v1
 
-      - name: Publish selected crate(s)
+      - name: Publish crates
         env:
-          CARGO_REGISTRY_TOKEN: ${{ steps.params.outputs.dry_run == 'false' && steps.auth.outputs.token || '' }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
-          DRY_RUN_FLAG=""
-          if [ "${{ steps.params.outputs.dry_run }}" = "true" ]; then
-            DRY_RUN_FLAG="--dry-run"
-          fi
-
-          if [ "${{ steps.params.outputs.crate }}" = "all" ]; then
-            cargo publish -p auburn2d $DRY_RUN_FLAG
-            cargo publish -p auburn3d $DRY_RUN_FLAG
-          else
-            cargo publish -p "${{ steps.params.outputs.crate }}" $DRY_RUN_FLAG
-          fi
+          cargo publish -p auburn2d
+          cargo publish -p auburn3d
