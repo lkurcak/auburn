@@ -13,17 +13,29 @@ jobs:
   build_and_test:
     name: Rust project - latest
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain:
-          - stable
-        crate:
-          - auburn2d
-          - auburn3d
     steps:
       - uses: actions/checkout@v4
-      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo build --verbose -p ${{ matrix.crate }}
-      - run: cargo build --verbose -p ${{ matrix.crate }} --all-features
-      - run: cargo test --verbose -p ${{ matrix.crate }}
-      - run: cargo test --verbose -p ${{ matrix.crate }} --all-features
+
+      - name: Install Rust
+        run: |
+          rustup update stable
+          rustup default stable
+          rustc --version
+          cargo --version
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "auburn-workspace"
+
+      - name: Build workspace
+        run: cargo build --workspace --verbose
+
+      - name: Build workspace (all features)
+        run: cargo build --workspace --verbose --all-features
+
+      - name: Test workspace
+        run: cargo test --workspace --verbose
+
+      - name: Test workspace (all features)
+        run: cargo test --workspace --verbose --all-features
