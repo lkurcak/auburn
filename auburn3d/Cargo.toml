@@ -1,0 +1,27 @@
+[package]
+name = "auburn3d"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+description = "Fast and simple 3D collision detection and physics."
+repository = { workspace = true }
+readme = "README.md"
+keywords = ["math", "physics", "geometry", "gamedev", "3d"]
+categories = [
+    "algorithms",
+    "game-development",
+    "mathematics",
+    "simulation",
+]
+
+[features]
+default = ["dep:glam"]
+bevy = ["dep:bevy"]
+
+[dependencies]
+glam = { workspace = true, optional = true }
+bevy = { workspace = true, optional = true }
+
+[dev-dependencies]
+approx = { workspace = true }
+test-log = { workspace = true }

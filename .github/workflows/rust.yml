@@ -17,12 +17,13 @@ jobs:
       matrix:
         toolchain:
           - stable
-          - beta
-          - nightly
-        features:
-          - ""
+        crate:
+          - auburn2d
+          - auburn3d
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - run: cargo build --verbose ${{ matrix.features }}
-      - run: cargo test --verbose ${{ matrix.features }}
+      - run: cargo build --verbose -p ${{ matrix.crate }}
+      - run: cargo build --verbose -p ${{ matrix.crate }} --all-features
+      - run: cargo test --verbose -p ${{ matrix.crate }}
+      - run: cargo test --verbose -p ${{ matrix.crate }} --all-features

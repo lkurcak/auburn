@@ -1,71 +1,15 @@
-[package]
-name = "auburn"
-version = "0.1.5"
-edition = "2021"
-license = "MIT OR Apache-2.0"
-description = "Fast and simple physics library."
+[workspace]
+members = ["auburn2d", "auburn3d"]
+resolver = "2"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+license = "MIT"
 repository = "https://github.com/lubomirkurcak/auburn/"
-keywords = ["math", "physics", "geometry", "gamedev", "algorithm"]
-categories = [
-    "algorithms",
-    "data-structures",
-    "game-development",
-    "mathematics",
-    "simulation",
-]
 
-[features]
-default = ["2d", "std", "poly"]
-2d = []
-3d = []
-std = []
-poly = []
-serde = ["dep:serde", "dep:serde_json", "dep:serde_with"]
-bevy = ["dep:bevy"]
-tilemap = ["std", "serde", "dep:lk_math", "dep:round-to"]
-logging = ["dep:log"]
-
-[dependencies]
-bevy = { version = "0.15.0", optional = true }
-glam = "0.29.2"                                # matching bevy
-lk_math = { version = "0.4.0", optional = true }
-#lk_math = { path = "c:/repos/lk_math", default-features = true }
-round-to = { version = "0.1.5", optional = true }
-serde = { version = "1.0.215", optional = true }
-serde_json = { version = "1.0.133", optional = true }
-serde_with = { version = "3.11.0", optional = true }
-log = { version = "0.4.22", optional = true }
-
-[dev-dependencies]
-approx = "0.5.1"
-env_logger = "0.11.5"
-test-log = "0.2.16"
-
-# Enable a small amount of optimization in debug mode
-[profile.dev]
-opt-level = 1
-
-# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
-[profile.dev.package."*"]
-opt-level = 3
-
-
-[[example]]
-name = "basic2d"
-required-features = ["2d"]
-
-[[example]]
-name = "basic3d"
-required-features = ["3d"]
-
-[[example]]
-name = "penetrates2d"
-required-features = ["2d"]
-
-[[example]]
-name = "sdf2d"
-required-features = ["2d"]
-
-[[example]]
-name = "sdfv2d"
-required-features = ["2d"]
+[workspace.dependencies]
+glam = { version = "0.32.0", features = ["approx"] }
+bevy = { version = "0.19.0" }
+approx = "0.5"
+test-log = "0.2"

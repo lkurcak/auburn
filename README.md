@@ -1,17 +1,14 @@
 # auburn
 
-![Auburn Color](auburn.png)
+A Cargo workspace for fast and simple collision detection and physics.
 
-Fast and simple physics library.
+## Crates
 
-## Bevy
+- [`auburn2d`](./auburn2d) — 2D collision detection and physics
+- [`auburn3d`](./auburn3d) — 3D collision detection and physics
 
-When used with [`bevy`](https://github.com/bevyengine/bevy) use matching version of `auburn` to reuse dependencies for seamless interoperability.
+The previous `auburn` crate has been deprecated and split into `auburn2d` and `auburn3d`. Use those crates directly.
 
-| bevy   | auburn |
-| ------ | ------ |
-| 0.15.0 | 0.1.5  |
-| 0.14.1 | 0.1.4  |
-| 0.13.2 | 0.1.3  |
-| 0.12.1 | 0.1.2  |
+## License
 
+This project is licensed under the MIT License.
