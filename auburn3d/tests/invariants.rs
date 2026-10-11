@@ -1,5 +1,5 @@
-use auburn3d::prelude::*;
 use auburn3d::Quat;
+use auburn3d::prelude::*;
 use std::fmt::Debug;
 
 fn test_isometry3d_invariants<I: Transformation3d + Debug + PartialEq>(iso: &I) {

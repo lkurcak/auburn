@@ -14,8 +14,8 @@ pub use bevy::prelude::{Quat, Vec3};
 pub use glam::{Quat, Vec3};
 
 pub mod prelude {
-    pub use crate::collider::Collider;
     pub use crate::Vec3;
+    pub use crate::collider::Collider;
     pub use crate::property::support::Support;
     pub use crate::relation::cast::{
         TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact,

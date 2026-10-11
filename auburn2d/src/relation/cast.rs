@@ -4,7 +4,7 @@ pub trait TimeOfImpact<T> {
     /// Casts the object in the direction of the given vector until it collides with another
     /// object.
     ///
-    /// Returns the "time of impact", which can be multiplied by [`vel`] to get the distance
+    /// Returns the "time of impact", which can be multiplied by `vel` to get the distance
     /// traveled.
     ///
     /// See also [`TimeOfImpactAndExit::toiae`].
@@ -17,7 +17,7 @@ pub trait TimeTravelingTimeOfImpact<T> {
     /// Casts the object in the direction of the given vector until it collides with another
     /// object.
     ///
-    /// Returns the "time of impact", which can be multiplied by [`vel`] to get the distance
+    /// Returns the "time of impact", which can be multiplied by `vel` to get the distance
     /// traveled.
     ///
     /// As opposed to [`TimeOfImpact::toi`], time of impact can be negative.
@@ -29,7 +29,7 @@ pub trait TimeTravelingTimeOfImpact<T> {
 pub trait TimeOfImpactAndExit<T> {
     /// Casts the object in the direction of the given vector.
     ///
-    /// Returns the "time of impact" and "time of exit", which can be multiplied by [`vel`] to get the distance
+    /// Returns the "time of impact" and "time of exit", which can be multiplied by `vel` to get the distance
     /// traveled.
     ///
     /// For more information see [`TimeOfImpact::toi`].
@@ -39,7 +39,7 @@ pub trait TimeOfImpactAndExit<T> {
 pub trait TimeTravelingTimeOfImpactAndExit<T> {
     /// Casts the object in the direction of the given vector.
     ///
-    /// Returns the "time of impact" and "time of exit", which can be multiplied by [`vel`] to get the distance
+    /// Returns the "time of impact" and "time of exit", which can be multiplied by `vel` to get the distance
     /// traveled.
     ///
     /// As opposed to [`TimeOfImpactAndExit::toiae`], times can be negative.
@@ -69,7 +69,7 @@ pub trait Cast<T> {
     /// Casts the object in the direction of the given vector until it collides with another
     /// object.
     ///
-    /// Returns the "time of impact", which can be multiplied by [`vel`] to get the distance
+    /// Returns the "time of impact", which can be multiplied by `vel` to get the distance
     /// traveled.
     ///
     /// For more information see [`TimeOfImpact::toi`].

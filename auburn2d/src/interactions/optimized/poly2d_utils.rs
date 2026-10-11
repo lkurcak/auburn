@@ -33,7 +33,7 @@ fn ray_polygon_times(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Vec<f32> {
         }
         let t = -r.perp_dot(edge) / denom;
         let s = vel.perp_dot(r) / denom;
-        if s >= -1e-6 && s <= 1.0 + 1e-6 {
+        if (-1e-6..=1.0 + 1e-6).contains(&s) {
             times.push(t);
         }
     }
