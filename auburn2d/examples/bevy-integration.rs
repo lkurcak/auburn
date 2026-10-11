@@ -4,7 +4,7 @@ use bevy::prelude::*;
 fn main() {
     App::new()
         .add_systems(Startup, setup)
-        .add_systems(Update, print_names)
+        .add_systems(Update, (print_names, collide_among_characters))
         .run();
 }
 

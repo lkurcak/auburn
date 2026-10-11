@@ -301,6 +301,7 @@ mod tests {
     }
 
     #[test_log::test]
+    #[allow(clippy::op_ref)] // the reference impls are what's tested
     fn test_mul_consistency() {
         let r1 = Rotor2d::radians(core::f32::consts::FRAC_PI_2);
         let r2 = Rotor2d::radians(core::f32::consts::FRAC_PI_4);

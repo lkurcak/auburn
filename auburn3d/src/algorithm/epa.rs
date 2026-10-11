@@ -30,12 +30,7 @@ where
 
     let mut faces = if vertices.len() == 4 {
         let mut faces = Vec::new();
-        let face_indices = [
-            [0, 1, 2],
-            [0, 3, 1],
-            [0, 2, 3],
-            [1, 3, 2],
-        ];
+        let face_indices = [[0, 1, 2], [0, 3, 1], [0, 2, 3], [1, 3, 2]];
         for &idx in &face_indices {
             let a = vertices[idx[0]];
             let b = vertices[idx[1]];
