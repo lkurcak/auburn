@@ -13,3 +13,6 @@ glam = { version = "0.32.0", features = ["approx"] }
 bevy = { version = "0.20.0" }
 approx = "0.5"
 test-log = "0.2"
+
+[workspace.lints.clippy]
+mod_module_files = "warn"

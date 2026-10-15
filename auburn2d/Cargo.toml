@@ -32,3 +32,6 @@ required-features = ["bevy"]
 
 [[example]]
 name = "triangle-shape"
+
+[lints]
+workspace = true
