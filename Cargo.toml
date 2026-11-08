@@ -3,14 +3,17 @@ members = ["auburn2d", "auburn3d"]
 resolver = "2"
 
 [workspace.package]
-version = "0.3.0"
+version = "0.3.1"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/lkurcak/auburn/"
 
 [workspace.dependencies]
 glam = { version = "0.32.0", features = ["approx"] }
-bevy = { version = "0.20.0" }
+# Only ECS and math: users pick Bevy's rendering, audio etc. themselves.
+bevy = { version = "0.20.0", default-features = false }
+# Tests compare bevy's vectors with `approx`.
+bevy_math = { version = "0.20.0", default-features = false, features = ["approx", "std"] }
 approx = "0.5"
 test-log = "0.2"
 

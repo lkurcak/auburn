@@ -24,6 +24,7 @@ bevy = { workspace = true, optional = true }
 
 [dev-dependencies]
 approx = { workspace = true }
+bevy_math = { workspace = true }
 test-log = { workspace = true }
 
 [[example]]
