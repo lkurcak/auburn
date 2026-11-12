@@ -6,6 +6,43 @@ use crate::relation::cast::{
 use crate::shape::{ball::Ball, box2d::Box2d, point::Point};
 use crate::transformation::Transformation2d;
 
+use super::box_point::slab;
+
+/// Whether `vel` runs along an axis: one of its components is too small for its reciprocal to
+/// be finite (zero of either sign, or subnormal). The slab method in the casts below divides by
+/// the velocity, which then gives `0 * inf = NaN` wherever the ball's path lies exactly on one
+/// of the slabs' edges, so these go to [`along_an_axis`] instead.
+fn is_along_an_axis(vel: Vec2) -> bool {
+    !(1.0 / vel.x).is_finite() || !(1.0 / vel.y).is_finite()
+}
+
+/// When a ball moving along an axis (see [`is_along_an_axis`]) overlaps a box, over all of
+/// time (touching counts): from when to when, or `None` if never. `p` is the ball's center
+/// relative to the box's. It takes the rounded box's cross-section along the ball's path.
+fn along_an_axis(p: Vec2, half: Vec2, radius: f32, vel: Vec2) -> Option<(f32, f32)> {
+    if (1.0 / vel.x).is_finite() {
+        // Moving along x: the same with the axes swapped
+        let swap = |v: Vec2| Vec2::new(v.y, v.x);
+        return along_y(swap(p), swap(half), radius, vel.x);
+    }
+    along_y(p, half, radius, vel.y)
+}
+
+/// [`along_an_axis`] for a ball that keeps its x (and moves along y, if at all).
+fn along_y(p: Vec2, half: Vec2, radius: f32, vel_y: f32) -> Option<(f32, f32)> {
+    // How far above and below the box's center the ball touches it, at the ball's x
+    let dx = p.x.abs() - half.x;
+    let reach = if dx <= 0.0 {
+        half.y + radius
+    } else if dx <= radius {
+        // Past the side, only a rounded corner is in the way
+        half.y + (radius * radius - dx * dx).sqrt()
+    } else {
+        return None;
+    };
+    slab(-reach - p.y, reach - p.y, vel_y)
+}
+
 impl TimeOfImpact<Collider<'_, Box2d, Vec2>> for Collider<'_, Ball, Vec2> {
     fn toi(&self, other: &Collider<'_, Box2d, Vec2>, vel: Vec2) -> Option<f32> {
         let flip_signs_based_on_vel = |mut v: Vec2| {
@@ -21,6 +58,10 @@ impl TimeOfImpact<Collider<'_, Box2d, Vec2>> for Collider<'_, Ball, Vec2> {
         let a = self.isometry.apply_to_origin();
         let b = other.isometry.apply_to_origin();
         let p = a - b;
+        if is_along_an_axis(vel) {
+            return along_an_axis(p, other.shape.half_size, self.shape.radius, vel)
+                .and_then(|(enter, exit)| (exit >= 0.0).then_some(enter.max(0.0)));
+        }
         let inv_vel = 1.0 / vel;
 
         let mut x0 = (-p.x - other.shape.half_size.x - self.shape.radius) * inv_vel.x;
@@ -148,13 +189,8 @@ impl TimeOfImpact<Collider<'_, Ball, Vec2>> for Collider<'_, Box2d, Vec2> {
 }
 impl TimeOfImpactAndExit<Collider<'_, Box2d, Vec2>> for Collider<'_, Ball, Vec2> {
     fn toiae(&self, other: &Collider<'_, Box2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        self.tttoiae(other, vel).and_then(|(toi, toe)| {
-            if toe.is_sign_negative() {
-                None
-            } else {
-                Some((toi.max(0.0), toe))
-            }
-        })
+        self.tttoiae(other, vel)
+            .and_then(|(toi, toe)| (toe >= 0.0).then_some((toi.max(0.0), toe)))
     }
 }
 impl TimeOfImpactAndExit<Collider<'_, Ball, Vec2>> for Collider<'_, Box2d, Vec2> {
@@ -179,6 +215,10 @@ impl TimeTravelingTimeOfImpact<Collider<'_, Box2d, Vec2>> for Collider<'_, Ball,
         let a = self.isometry.apply_to_origin();
         let b = other.isometry.apply_to_origin();
         let p = a - b;
+        if is_along_an_axis(vel) {
+            return along_an_axis(p, other.shape.half_size, self.shape.radius, vel)
+                .map(|(enter, _)| enter);
+        }
         let inv_vel = 1.0 / vel;
 
         let mut x0 = (-p.x - other.shape.half_size.x - self.shape.radius) * inv_vel.x;
@@ -245,6 +285,10 @@ impl TimeTravelingTimeOfImpact<Collider<'_, Ball, Vec2>> for Collider<'_, Box2d,
 }
 impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Box2d, Vec2>> for Collider<'_, Ball, Vec2> {
     fn tttoiae(&self, other: &Collider<'_, Box2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
+        if is_along_an_axis(vel) {
+            let p = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
+            return along_an_axis(p, other.shape.half_size, self.shape.radius, vel);
+        }
         if let Some(toi) = self.tttoi(other, vel) {
             let toe = self.tttoi(other, -vel).map(|x| -x).unwrap_or(toi);
             Some((toi, toe))
