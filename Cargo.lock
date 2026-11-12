@@ -132,7 +132,7 @@ dependencies = [
 
 [[package]]
 name = "auburn2d"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "approx",
  "bevy",
@@ -143,7 +143,7 @@ dependencies = [
 
 [[package]]
 name = "auburn3d"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "approx",
  "bevy",
