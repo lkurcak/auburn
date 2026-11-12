@@ -50,11 +50,11 @@ impl TimeOfImpactAndExit<Collider<'_, Ball, Vec2>> for Collider<'_, Point, Vec2>
         let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
 
         let dd = d.dot(d);
-        if dd < other.shape.radius * other.shape.radius {
-            return Some((0.0, 0.0));
-        }
-
         let a = vel.dot(vel);
+        if !(1.0 / a).is_finite() {
+            // Not moving: inside stays inside
+            return (dd < other.shape.radius * other.shape.radius).then_some((0.0, f32::INFINITY));
+        }
         let b = 2.0 * d.dot(vel);
         let c = dd - other.shape.radius * other.shape.radius;
 
