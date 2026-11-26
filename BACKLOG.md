@@ -34,4 +34,4 @@
 
 ## Done
 
-- Land the randomized suite as permanent tests: `tests/randomized` and `tests/regressions.rs` in both crates, with failing checks `#[ignore]`d by backlog item.
+- Land the randomized suite as permanent tests (#16): `tests/randomized` and `tests/regressions.rs` in both crates, with failing checks `#[ignore]`d by backlog item.
