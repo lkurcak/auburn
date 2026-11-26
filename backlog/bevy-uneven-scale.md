@@ -10,7 +10,8 @@ Reproduced on cf06cd2.
   With scale (−1,1,1), `Box3d(1)` support(+x) gives x=−1.
 - Decide between proper support and rejecting it:
   - proper support: map the support direction through the transpose of the linear part
-    instead of `inverse()` in `Collider::support` (`collider.rs`);
+    instead of `inverse()` in `Collider::support` (`collider.rs`), which also fixes
+    [support far from the origin](support-direction.md);
   - rejecting it: `debug_assert` uniform scale and use only xy in 2D.
 - User-defined `Transformation2d` types with uneven scale also get wrong support points.
   Either document a uniform-scale contract or extend the trait.

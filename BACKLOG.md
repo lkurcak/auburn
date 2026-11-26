@@ -2,9 +2,9 @@
 
 ## Now
 
-1. [Land the randomized suite as permanent tests](backlog/randomized-suite.md)
-2. [3D reversed `toiae`/`tttoiae` swap entry and exit](backlog/toiae-swap-3d.md)
-3. [GJK tolerances must scale with the shapes](backlog/gjk-tolerances.md)
+1. [3D reversed `toiae`/`tttoiae` swap entry and exit](backlog/toiae-swap-3d.md)
+2. [GJK and EPA tolerances must scale with the shapes](backlog/gjk-tolerances.md)
+3. [`Collider::support` loses precision far from the origin](backlog/support-direction.md)
 4. [3D EPA returns zero or wrong vectors](backlog/epa-3d.md)
 5. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
 6. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
@@ -33,3 +33,5 @@
 - no_std. Tried and reverted in 2024; the CI no-std job exists but is skipped. Low priority.
 
 ## Done
+
+- Land the randomized suite as permanent tests (#16): `tests/randomized` and `tests/regressions.rs` in both crates, with failing checks `#[ignore]`d by backlog item.

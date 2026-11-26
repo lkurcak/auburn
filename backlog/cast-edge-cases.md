@@ -6,7 +6,7 @@ Reproduced on cf06cd2.
   gives `Some(NaN)`; it should be None.
   - Decide and document what an overlap at zero velocity returns.
   - Files: `vec2/` point and ball casts and `transform2d/ball_point.rs`, which have no
-    `a == 0` guard.
+    `a == 0` guard. `Transform2d` Ball `toiae` at rest returns `(0, NaN)`.
 - (b) 3D `tttoi`/`tttoiae` never return negative times, because they just call
   `toi`/`toiae`. `Ball(1)@0 .tttoi(Point@(0.5,0,0), X)` gives 0; should be −0.5.
 - (c) 3D zero velocity while overlapping: `Ball(1)@0 .toi(Point@(0.5,0,0), 0)` gives None;

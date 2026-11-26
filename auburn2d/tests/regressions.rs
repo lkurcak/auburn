@@ -1,0 +1,324 @@
+//! Minimal reproducers for known bugs, grouped by the backlog item that fixes them.
+//!
+//! Each `#[ignore]` reason names the item's `BACKLOG.md` details file. The item un-ignores its
+//! tests when it lands. The randomized suite (`tests/randomized`) covers the same bugs more
+//! broadly.
+
+use auburn2d::prelude::*;
+use auburn2d::transformation::Transformation2d;
+use std::sync::Arc;
+
+fn near(got: Option<f32>, want: f32) -> bool {
+    got.is_some_and(|t| (t - want).abs() < 1e-3)
+}
+
+fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
+    got.is_some_and(|(a, b)| (a - want.0).abs() < 1e-3 && (b - want.1).abs() < 1e-3)
+}
+
+fn square_poly(half: f32) -> Poly2d {
+    Poly2d::from(Box2d::square(half))
+}
+
+// backlog/gjk-tolerances.md
+
+#[test]
+#[ignore = "backlog/gjk-tolerances.md"]
+fn small_balls_apart_in_both_directions() {
+    // 0.022 apart with radii 0.01: a gap of 0.002.
+    let ball = Ball::new(0.01);
+    let (a, b) = (Vec2::new(0.00123, -0.0007), Vec2::new(0.016786, -0.016256));
+    assert!(!ball.at(&a).collides(&ball.at(&b)));
+    assert!(!ball.at(&b).collides(&ball.at(&a)));
+}
+
+#[test]
+#[ignore = "backlog/gjk-tolerances.md"]
+fn no_false_positives_at_small_scale() {
+    // Balls with a gap of a tenth of their radius, in 360 directions.
+    for r in [0.01f32, 0.001] {
+        for i in 0..360 {
+            let dir = Rotor2d::radians((i as f32).to_radians()) * Vec2::X;
+            let a = Vec2::new(0.123 * r, -0.07 * r);
+            let b = a + dir * (2.2 * r);
+            let ball = Ball::new(r);
+            assert!(!ball.at(&a).collides(&ball.at(&b)), "r = {r}, {i}°");
+        }
+    }
+}
+
+// backlog/support-direction.md
+
+#[test]
+#[ignore = "backlog/support-direction.md"]
+fn far_from_origin_ball_contains_point() {
+    // 0.69 apart with radius 0.94, near (1e4, -1e4).
+    let ball = Ball::new(0.942_961_9);
+    let (p, c) = (
+        Vec2::new(9997.541, -9997.661),
+        Vec2::new(9998.233, -9997.66),
+    );
+    assert!(Point.at(&p).collides(&ball.at(&c)));
+    assert!(ball.at(&c).collides(&Point.at(&p)));
+    assert!(ball.at(&c).penetrates(&Point.at(&p)).is_some());
+}
+
+// backlog/epa-2d.md
+
+#[test]
+#[ignore = "backlog/epa-2d.md"]
+fn deep_near_concentric_balls_separate() {
+    let (a, b) = (Vec2::new(0.1655, 0.1422), Vec2::ZERO);
+    let (small, large) = (Ball::new(0.7204), Ball::new(4.7942));
+    let p = small.at(&a).penetrates(&large.at(&b)).unwrap();
+    let left = (0.7204 + 4.7942) - (a + p - b).length();
+    assert!(left.abs() < 1e-2, "p = {p:?} leaves {left} of overlap");
+}
+
+#[test]
+#[ignore = "backlog/epa-2d.md"]
+fn concentric_balls_penetrate_by_full_depth() {
+    let z = Vec2::ZERO;
+    let p = Ball::new(1.0)
+        .at(&z)
+        .penetrates(&Ball::new(2.0).at(&z))
+        .unwrap();
+    assert!((p.length() - 3.0).abs() < 1e-3, "{p:?}");
+}
+
+#[test]
+fn coincident_boxes_penetrate_by_full_depth() {
+    let z = Vec2::ZERO;
+    let rect = Box2d::new(Vec2::new(2.0, 1.0));
+    let p = rect.at(&z).penetrates(&rect.at(&z)).unwrap();
+    assert!((p.length() - 2.0).abs() < 1e-3, "{p:?}");
+}
+
+// backlog/transform2d-scale.md
+
+#[test]
+#[ignore = "backlog/transform2d-scale.md"]
+fn transform2d_ball_ball_scale_applies_once() {
+    // Ball(1) at 0 against Ball(1) scaled by 2 at (5, 0): a gap of 2.
+    let a = Transform2d::from_translation(Vec2::ZERO);
+    let b = Transform2d::from_translation(Vec2::new(5.0, 0.0)).with_scale(2.0);
+    let ball = Ball::new(1.0);
+    assert!(!ball.at(&a).collides(&ball.at(&b)));
+    assert!(near(ball.at(&a).toi(&ball.at(&b), Vec2::X), 2.0));
+}
+
+#[test]
+#[ignore = "backlog/transform2d-scale.md"]
+fn transform2d_ball_point_uses_the_ball_scale() {
+    // Ball(1) scaled by 2 at 0, point at (3, 0) with its own scale.
+    let ball = Transform2d::from_translation(Vec2::ZERO).with_scale(2.0);
+    let point = Transform2d::from_translation(Vec2::new(3.0, 0.0)).with_scale(0.5);
+    let r = Ball::new(1.0).at(&ball).toi(&Point.at(&point), Vec2::X);
+    assert!(near(r, 1.0), "{r:?}");
+    let r = Point.at(&point).toi(&Ball::new(1.0).at(&ball), Vec2::NEG_X);
+    assert!(near(r, 1.0), "{r:?}");
+}
+
+#[test]
+#[ignore = "backlog/transform2d-scale.md"]
+fn transform2d_toiae_exits_when_starting_inside() {
+    let t = Transform2d::from_translation(Vec2::ZERO);
+    let r = Point.at(&t).toiae(&Ball::new(1.0).at(&t), Vec2::X);
+    assert!(near_span(r, (0.0, 1.0)), "{r:?}");
+}
+
+#[test]
+#[ignore = "backlog/transform2d-scale.md"]
+fn transform2d_negative_scale_casts() {
+    // Scale -1 at 0, the other at (5, 0): a gap of 3.
+    let a = Transform2d::from_translation(Vec2::ZERO).with_scale(-1.0);
+    let b = Transform2d::from_translation(Vec2::new(5.0, 0.0));
+    let (ball, square) = (Ball::new(1.0), Box2d::square(1.0));
+    let r = ball.at(&a).toi(&ball.at(&b), Vec2::X);
+    assert!(near(r, 3.0), "ball-ball {r:?}");
+    let r = square.at(&a).toi(&square.at(&b), Vec2::X);
+    assert!(near(r, 3.0), "box-box {r:?}");
+    let r = ball.at(&a).toi(&square.at(&b), Vec2::X);
+    assert!(near(r, 3.0), "ball-box {r:?}");
+}
+
+// backlog/cast-edge-cases.md
+
+#[test]
+#[ignore = "backlog/cast-edge-cases.md"]
+fn time_traveling_casts_at_rest_are_not_nan() {
+    let (p, inside, far) = (Vec2::ZERO, Vec2::new(0.5, 0.0), Vec2::new(5.0, 0.0));
+    let ball = Ball::new(1.0);
+    let r = Point.at(&p).tttoi(&ball.at(&inside), Vec2::ZERO);
+    assert!(r.is_some_and(|t| t <= 0.0), "overlapping: {r:?}");
+    assert_eq!(Point.at(&p).tttoi(&ball.at(&far), Vec2::ZERO), None);
+    assert_eq!(ball.at(&p).tttoiae(&ball.at(&far), Vec2::ZERO), None);
+    let (t1, t2) = (
+        Transform2d::from_translation(p),
+        Transform2d::from_translation(inside),
+    );
+    let r = ball.at(&t1).tttoi(&ball.at(&t2), Vec2::ZERO);
+    assert!(r.is_some_and(|t| t <= 0.0), "Transform2d: {r:?}");
+}
+
+// backlog/poly2d-robustness.md
+
+#[test]
+#[ignore = "backlog/poly2d-robustness.md"]
+fn point_at_regular_polygon_centre() {
+    let hexagon = Poly2d::regular(6, 1.0);
+    let z = Vec2::ZERO;
+    assert!(Point.at(&z).collides(&hexagon.at(&z)));
+    assert_eq!(Point.at(&z).toi(&hexagon.at(&z), Vec2::ZERO), Some(0.0));
+    assert_eq!(Point.at(&z).toi(&hexagon.at(&z), Vec2::X), Some(0.0));
+}
+
+#[test]
+#[ignore = "backlog/poly2d-robustness.md"]
+fn regular_polygons_are_counter_clockwise() {
+    let p = Poly2d::regular(6, 1.0).points;
+    let twice_area: f32 = (0..p.len())
+        .map(|i| p[i].perp_dot(p[(i + 1) % p.len()]))
+        .sum();
+    assert!(twice_area > 0.0, "{p:?}");
+}
+
+#[test]
+#[ignore = "backlog/poly2d-robustness.md"]
+fn small_polygon_excludes_nearby_point() {
+    // A square of half size 1e-3, and a point 4e-4 outside its right edge.
+    let square = square_poly(1e-3);
+    let z = Vec2::ZERO;
+    let p = Vec2::new(1.4e-3, 0.0);
+    assert_eq!(Point.at(&p).toi(&square.at(&z), Vec2::ZERO), None);
+}
+
+#[test]
+#[ignore = "backlog/poly2d-robustness.md"]
+fn poly2d_area() {
+    assert!((square_poly(1.0).area() - 4.0).abs() < 1e-6);
+}
+
+#[test]
+#[ignore = "backlog/poly2d-robustness.md"]
+fn empty_poly2d_does_not_panic() {
+    let empty = Poly2d::default();
+    let z = Vec2::ZERO;
+    let _ = Point.at(&z).collides(&empty.at(&z));
+}
+
+// backlog/generic-shape-cast.md
+
+#[test]
+#[ignore = "backlog/generic-shape-cast.md"]
+fn ball_poly_cast_past_t_one() {
+    let (a, b) = (Vec2::ZERO, Vec2::new(10.0, 0.0));
+    let ball = Ball::new(1.0);
+    // Ball against a Box2d of the same shape gives 8.
+    assert!(near(
+        ball.at(&a).toi(&Box2d::square(1.0).at(&b), Vec2::X),
+        8.0
+    ));
+    let r = ball.at(&a).toi(&square_poly(1.0).at(&b), Vec2::X);
+    assert!(near(r, 8.0), "{r:?}");
+}
+
+#[test]
+#[ignore = "backlog/generic-shape-cast.md"]
+fn ball_poly_cast_hits_corner() {
+    // The ball meets the square's corner (2, 0.5) after travelling 2 - √0.75.
+    let (a, b, vel) = (Vec2::ZERO, Vec2::new(3.0, 1.5), Vec2::new(2.0, 0.0));
+    let (ball, square) = (Ball::new(1.0), square_poly(1.0));
+    let want = (2.0 - 0.75f32.sqrt()) / 2.0;
+    let r = ball.at(&a).toi(&square.at(&b), vel);
+    assert!(near(r, want), "toi {r:?}, want {want}");
+    let r = ball.at(&a).tttoi(&square.at(&b), vel);
+    assert!(near(r, want), "tttoi {r:?}, want {want}");
+    let r = ball.at(&a).toiae(&square.at(&b), vel);
+    assert!(
+        r.is_some_and(|(entry, _)| (entry - want).abs() < 1e-3),
+        "toiae {r:?}"
+    );
+}
+
+// backlog/bevy-uneven-scale.md
+
+/// A user-defined transformation with uneven scale, which `Transformation2d` allows.
+#[derive(Debug, Clone, Copy)]
+struct Stretch {
+    t: Vec2,
+    s: Vec2,
+}
+
+impl Transformation2d for Stretch {
+    fn apply_to_origin(&self) -> Vec2 {
+        self.t
+    }
+    fn apply(&self, p: Vec2) -> Vec2 {
+        p * self.s + self.t
+    }
+    fn inverse(&self) -> Self {
+        Stretch {
+            t: -self.t / self.s,
+            s: 1.0 / self.s,
+        }
+    }
+    fn compose(&self, o: &Self) -> Self {
+        Stretch {
+            t: self.s * o.t + self.t,
+            s: self.s * o.s,
+        }
+    }
+}
+
+#[test]
+#[ignore = "backlog/bevy-uneven-scale.md"]
+fn uneven_scale_support() {
+    // Ball(1) stretched to an ellipse with semi-axes 1 and 4. Its support along (1, 1) is
+    // the point maximising x + y.
+    let e = Stretch {
+        t: Vec2::ZERO,
+        s: Vec2::new(1.0, 4.0),
+    };
+    let s = Ball::new(1.0).at(&e).support(Vec2::ONE);
+    let want = Vec2::new(1.0, 16.0) / 17f32.sqrt();
+    assert!((s - want).length() < 1e-4, "{s:?}, want {want:?}");
+}
+
+#[cfg(feature = "bevy")]
+mod bevy_transform {
+    use super::*;
+    use bevy::prelude::{Transform, Vec3};
+
+    #[test]
+    #[ignore = "backlog/bevy-uneven-scale.md"]
+    fn uneven_scale_box() {
+        // Box2d(1) under scale (1, 3, 1) covers x in [-1, 1] and y in [-3, 3].
+        let t = Transform::from_scale(Vec3::new(1.0, 3.0, 1.0));
+        let inside = Transform::from_xyz(0.0, 2.5, 0.0);
+        let outside = Transform::from_xyz(2.5, 0.0, 0.0);
+        assert!(Point.at(&inside).collides(&Box2d::square(1.0).at(&t)));
+        assert!(!Point.at(&outside).collides(&Box2d::square(1.0).at(&t)));
+    }
+
+    #[test]
+    #[ignore = "backlog/bevy-uneven-scale.md"]
+    fn z_scale_does_not_leak_into_2d() {
+        let t = Transform::from_scale(Vec3::new(1.0, 1.0, 5.0));
+        let outside = Transform::from_xyz(2.5, 0.0, 0.0);
+        assert!(!Point.at(&outside).collides(&Box2d::square(1.0).at(&t)));
+    }
+
+    #[test]
+    #[ignore = "backlog/bevy-uneven-scale.md"]
+    fn mirrored_triangle() {
+        let triangle = Poly2d::new(Arc::new(vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(2.0, 0.0),
+            Vec2::new(0.0, 1.0),
+        ]));
+        let t = Transform::from_scale(Vec3::new(-1.0, 1.0, 1.0));
+        let inside = Transform::from_xyz(-1.5, 0.2, 0.0);
+        assert!(Point.at(&inside).collides(&triangle.at(&t)));
+    }
+}
