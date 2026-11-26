@@ -20,3 +20,13 @@ default branch and shows it, so it has to be true.
   file, move what's still open in it into `BACKLOG.md`, then cut the memory file down to a
   pointer to `BACKLOG.md`. On "go", read `BACKLOG.md` and continue with the first item
   under Now. Memory keeps what isn't a work item: how I like to work, where things are.
+
+## Tests
+
+- Tests that fail because of a known bug are `#[ignore = "backlog/<slug>.md, ..."]`, naming
+  every backlog item that has to land first. When an item lands, grep the tests for its
+  details file, run them with `--ignored`, and un-ignore what passes. In the randomized
+  suites (`tests/randomized`), move the pairs that pass into the main test instead.
+- The randomized suites draw the same cases on every run. Check them at 20 times the cases
+  before un-ignoring anything:
+  `AUBURN_RANDOMIZED_SCALE=20 cargo test --release --all-features -- --ignored`.
