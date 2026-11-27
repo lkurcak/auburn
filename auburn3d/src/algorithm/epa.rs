@@ -3,7 +3,12 @@ use super::gjk::Simplex;
 use crate::Vec3;
 
 const EPA_MAX_ITERATIONS: usize = 30;
-const EPA_TOLERANCE: f32 = 1e-4;
+/// EPA stops once a support point gets no further than this fraction of the polytope's size
+/// past the closest face. Being relative, it works the same for tiny and huge shapes.
+const EPA_RELATIVE_TOLERANCE: f32 = 1e-5;
+/// Far from the origin, rounding in the support points' world coordinates outweighs that, so
+/// EPA also stops at this many units of f32 precision of those coordinates.
+const EPA_ROUNDING_TOLERANCE: f32 = 4.0 * f32::EPSILON;
 
 /// A face of the polytope, defined by three vertex indices.
 #[derive(Debug, Clone, Copy)]
@@ -19,8 +24,11 @@ where
     F1: Fn(Vec3) -> Vec3,
     F2: Fn(Vec3) -> Vec3,
 {
-    // Minkowski difference support function
-    let support = |dir: Vec3| -> Vec3 { support_a(dir) - support_b(-dir) };
+    // Minkowski difference support function, and the size of its world coordinates
+    let support = |dir: Vec3| -> (Vec3, f32) {
+        let (a, b) = (support_a(dir), support_b(-dir));
+        (a - b, a.abs().max(b.abs()).max_element())
+    };
 
     // Convert simplex to polytope
     let mut vertices: Vec<Vec3> = Vec::new();
@@ -51,6 +59,11 @@ where
         Vec::new()
     };
 
+    // Every vertex is on the Minkowski difference's boundary, so the farthest one bounds the
+    // penetration depth from above.
+    let size = vertices.iter().map(|v| v.length()).fold(0.0, f32::max);
+    let relative_tolerance = EPA_RELATIVE_TOLERANCE * size;
+
     for _ in 0..EPA_MAX_ITERATIONS {
         if faces.is_empty() {
             break;
@@ -61,12 +74,13 @@ where
         let closest = faces[closest_idx];
 
         // Get a new support point in the direction of the closest face normal
-        let support_point = support(closest.normal);
+        let (support_point, world) = support(closest.normal);
+        let tolerance = relative_tolerance.max(EPA_ROUNDING_TOLERANCE * world);
 
         // Check how much further we can go
         let distance = support_point.dot(closest.normal);
 
-        if distance - closest.distance < EPA_TOLERANCE {
+        if distance - closest.distance <= tolerance {
             return closest.normal * distance;
         }
 
@@ -121,15 +135,19 @@ where
     }
 }
 
+/// The unit normal of triangle `abc`. A degenerate triangle, whose cross product is no
+/// bigger than its rounding error, keeps its unnormalized normal.
 fn compute_face_normal(a: Vec3, b: Vec3, c: Vec3) -> Vec3 {
     let ab = b - a;
     let ac = c - a;
-    let mut normal = ac.cross(ab);
-    let length = normal.length();
-    if length > 1e-10 {
-        normal /= length;
+    let normal = ac.cross(ab);
+    let length_squared = normal.length_squared();
+    let noise = f32::EPSILON * f32::EPSILON * ab.length_squared() * ac.length_squared();
+    if length_squared > noise {
+        normal / length_squared.sqrt()
+    } else {
+        normal
     }
-    normal
 }
 
 fn find_closest_face(faces: &[Face]) -> usize {

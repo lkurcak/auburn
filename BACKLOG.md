@@ -2,18 +2,17 @@
 
 ## Now
 
-1. [GJK and EPA tolerances must scale with the shapes](backlog/gjk-tolerances.md)
-2. [`Collider::support` loses precision far from the origin](backlog/support-direction.md)
-3. [3D EPA returns zero or wrong vectors](backlog/epa-3d.md)
-4. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
-5. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
-6. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
-7. [`Poly2d` robustness: winding, epsilons, `area`, empty polygons](backlog/poly2d-robustness.md)
-8. Remove `From<ScaleTranslate2d> for bevy Isometry2d` (`auburn2d/src/transformation/scale_translate2d.rs`, bevy feature): it is two `todo!()`s. Deleting it is technically breaking, but it can only panic.
-9. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
-10. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
-11. [Cast coverage through the generic cast](backlog/cast-coverage.md)
-12. Release 0.4.0. Ask the user first: releases are tag-triggered through forge and publish to crates.io.
+1. [`Collider::support` loses precision far from the origin](backlog/support-direction.md)
+2. [3D EPA returns zero or wrong vectors](backlog/epa-3d.md)
+3. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
+4. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
+5. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
+6. [`Poly2d` robustness: winding, epsilons, `area`, empty polygons](backlog/poly2d-robustness.md)
+7. Remove `From<ScaleTranslate2d> for bevy Isometry2d` (`auburn2d/src/transformation/scale_translate2d.rs`, bevy feature): it is two `todo!()`s. Deleting it is technically breaking, but it can only panic.
+8. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
+9. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
+10. [Cast coverage through the generic cast](backlog/cast-coverage.md)
+11. Release 0.4.0. Ask the user first: releases are tag-triggered through forge and publish to crates.io.
 
 ## Later
 
@@ -31,8 +30,13 @@
 - Simple broadphase: a uniform grid or sort-and-sweep.
 - glam 0.34, only once bevy depends on it. `forge deps` reports "Cargo.toml would have to change".
 - no_std. Tried and reverted in 2024; the CI no-std job exists but is skipped. Low priority.
+- `cargo test --no-default-features --features bevy` doesn't compile: `tests/randomized` in both
+  crates imports `glam` directly. CI doesn't run that combination.
 
 ## Done
 
+- GJK and EPA tolerances scale with the shapes (#18): no absolute epsilons, search directions
+  as long as the shapes, EPA stops relative to the polytope's size, and coincident points touch
+  in 2D as in 3D.
 - Reversed 3D `toiae`/`tttoiae` no longer swap entry and exit (#17).
 - Land the randomized suite as permanent tests (#16): `tests/randomized` and `tests/regressions.rs` in both crates, with failing checks `#[ignore]`d by backlog item.

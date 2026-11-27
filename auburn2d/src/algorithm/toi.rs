@@ -24,7 +24,7 @@ where
     F2: Fn(Vec2) -> Vec2,
 {
     // If no relative velocity, just check current state
-    if vel.length_squared() < 1e-10 {
+    if vel == Vec2::ZERO {
         return gjk(support_a, support_b, 30).map(|_| 0.0);
     }
 
@@ -148,7 +148,7 @@ where
     F1: Fn(Vec2) -> Vec2,
     F2: Fn(Vec2) -> Vec2,
 {
-    if vel.length_squared() < 1e-10 {
+    if vel == Vec2::ZERO {
         return gjk(support_a, support_b, 30).map(|_| 0.0);
     }
 

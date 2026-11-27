@@ -103,12 +103,7 @@ mod collides {
     );
     static_test!(
         transform3d_tiny: collides @ Transform3d, Config::TINY,
-        [Point-Point]
-    );
-    static_test!(
-        #[ignore = "backlog/gjk-tolerances.md"]
-        transform3d_tiny_gjk_tolerances: collides @ Transform3d, Config::TINY,
-        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Point, Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         transform3d_huge: collides @ Transform3d, Config::HUGE,
@@ -182,23 +177,21 @@ mod penetrates {
         [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
-        #[ignore = "backlog/gjk-tolerances.md"]
-        transform3d_tiny_gjk_tolerances: penetrates @ Transform3d, Config::TINY,
+        transform3d_tiny: penetrates @ Transform3d, Config::TINY,
         [Point-Box3d]
     );
     static_test!(
-        #[ignore = "backlog/gjk-tolerances.md, backlog/epa-3d.md"]
-        transform3d_tiny_gjk_tolerances_epa: penetrates @ Transform3d, Config::TINY,
+        #[ignore = "backlog/epa-3d.md"]
+        transform3d_tiny_epa: penetrates @ Transform3d, Config::TINY,
         [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
-        #[ignore = "backlog/gjk-tolerances.md"]
-        transform3d_huge_gjk_tolerances: penetrates @ Transform3d, Config::HUGE,
+        transform3d_huge: penetrates @ Transform3d, Config::HUGE,
         [Point-Box3d]
     );
     static_test!(
-        #[ignore = "backlog/gjk-tolerances.md, backlog/epa-3d.md"]
-        transform3d_huge_gjk_tolerances_epa: penetrates @ Transform3d, Config::HUGE,
+        #[ignore = "backlog/epa-3d.md"]
+        transform3d_huge_epa: penetrates @ Transform3d, Config::HUGE,
         [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(

@@ -16,21 +16,6 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 
 const X5: Vec3 = Vec3::new(5.0, 0.0, 0.0);
 
-// backlog/gjk-tolerances.md
-
-#[test]
-#[ignore = "backlog/gjk-tolerances.md"]
-fn tiny_shapes_apart() {
-    let z = Vec3::ZERO;
-    // A gap of 8e-6.
-    let ball = Ball::new(1e-6);
-    assert!(!ball.at(&z).collides(&ball.at(&Vec3::new(1e-5, 0.0, 0.0))));
-    assert!(!Point.at(&z).collides(&Point.at(&Vec3::new(5e-6, 0.0, 0.0))));
-    // A gap of 3e-6.
-    let cube = Box3d::cube(1e-6);
-    assert!(!cube.at(&z).collides(&cube.at(&Vec3::new(0.0, 0.0, 5e-6))));
-}
-
 // backlog/epa-3d.md
 
 #[test]
@@ -176,6 +161,85 @@ fn box_ball_toiae() {
 }
 
 // Fixed bugs.
+
+#[test]
+/// GJK exited early on an absolute `first_point.length_squared() < 1e-10`.
+fn tiny_shapes_apart() {
+    let z = Vec3::ZERO;
+    // A gap of 8e-6.
+    let ball = Ball::new(1e-6);
+    assert!(!ball.at(&z).collides(&ball.at(&Vec3::new(1e-5, 0.0, 0.0))));
+    assert!(!Point.at(&z).collides(&Point.at(&Vec3::new(5e-6, 0.0, 0.0))));
+    // A gap of 3e-6.
+    let cube = Box3d::cube(1e-6);
+    assert!(!cube.at(&z).collides(&cube.at(&Vec3::new(0.0, 0.0, 5e-6))));
+}
+
+/// The same scenes at every scale give the same answers, scaled.
+#[test]
+fn scale_invariance() {
+    // Rotated and scaled, so `Collider::support` maps every direction.
+    let placed = |p: Vec3| {
+        let axis = Vec3::new(1.0, 2.0, 3.0).normalize();
+        Transform3d::from_rotation(auburn3d::Quat::from_axis_angle(axis, 0.7))
+            .with_translation(p)
+            .with_scale(2.0)
+    };
+    let dirs = [
+        Vec3::X,
+        Vec3::NEG_Y,
+        Vec3::new(1.0, 1.0, 1.0).normalize(),
+        Vec3::new(-0.3, 0.8, -0.5).normalize(),
+    ];
+    for k in [1e-6f32, 1e-3, 1.0, 1e3, 1e6] {
+        let (ball, cube) = (Ball::new(k), Box3d::cube(k));
+        let z = Vec3::ZERO;
+        for (i, dir) in dirs.into_iter().enumerate() {
+            let (apart, overlapping) = (dir * (2.2 * k), dir * (1.8 * k));
+            let msg = format!("k = {k}, {i}");
+            assert!(!ball.at(&z).collides(&ball.at(&apart)), "{msg}");
+            assert!(!ball.at(&apart).collides(&ball.at(&z)), "{msg}");
+            assert!(ball.at(&z).collides(&ball.at(&overlapping)), "{msg}");
+            // Scaled by 2, so 0.4k apart and overlapping by 0.4k.
+            let c = Vec3::new(0.5 * k, -0.25 * k, 0.75 * k);
+            let (pa, pb) = (placed(c), placed(c + dir * (4.4 * k)));
+            assert!(!ball.at(&pa).collides(&ball.at(&pb)), "{msg}");
+            assert!(!ball.at(&pb).collides(&ball.at(&pa)), "{msg}");
+            assert!(
+                ball.at(&pa)
+                    .collides(&ball.at(&placed(c + dir * (3.6 * k)))),
+                "{msg}"
+            );
+        }
+        // Cubes overlapping by 0.2k along x, and 0.2k apart.
+        let p = cube
+            .at(&z)
+            .penetrates(&cube.at(&Vec3::new(1.8 * k, 0.3 * k, -0.4 * k)));
+        assert!(
+            p.is_some_and(|p| (p - Vec3::new(-0.2 * k, 0.0, 0.0)).length() < 1e-4 * k),
+            "k = {k}: {p:?}"
+        );
+        let apart = Vec3::new(2.2 * k, 0.3 * k, -0.4 * k);
+        assert!(!cube.at(&z).collides(&cube.at(&apart)), "k = {k}");
+    }
+}
+
+/// Coincident points touch, as they do in 2D.
+#[test]
+fn coincident_points_touch() {
+    for p in [Vec3::ZERO, Vec3::new(3.0, -2.0, 1.0)] {
+        assert!(Point.at(&p).collides(&Point.at(&p)), "{p}");
+        assert_eq!(
+            Point.at(&p).penetrates(&Point.at(&p)),
+            Some(Vec3::ZERO),
+            "{p}"
+        );
+        let dot = Ball::new(0.0);
+        assert!(dot.at(&p).collides(&dot.at(&p)), "{p}");
+        assert!(Point.at(&p).collides(&dot.at(&p)), "{p}");
+        assert!(!Point.at(&p).collides(&Point.at(&(p + Vec3::X))), "{p}");
+    }
+}
 
 /// The reversed 3D casts swapped entry and exit.
 #[test]

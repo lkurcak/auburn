@@ -11,7 +11,7 @@ where
     F1: Fn(Vec3) -> Vec3,
     F2: Fn(Vec3) -> Vec3,
 {
-    if vel.length_squared() < 1e-10 {
+    if vel == Vec3::ZERO {
         return gjk(support_a, support_b, 30).map(|_| 0.0);
     }
 
@@ -110,7 +110,7 @@ where
     F1: Fn(Vec3) -> Vec3,
     F2: Fn(Vec3) -> Vec3,
 {
-    if vel.length_squared() < 1e-10 {
+    if vel == Vec3::ZERO {
         return gjk(support_a, support_b, 30).map(|_| 0.0);
     }
 

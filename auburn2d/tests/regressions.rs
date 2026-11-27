@@ -20,49 +20,6 @@ fn square_poly(half: f32) -> Poly2d {
     Poly2d::from(Box2d::square(half))
 }
 
-// backlog/gjk-tolerances.md
-
-#[test]
-#[ignore = "backlog/gjk-tolerances.md"]
-fn small_balls_apart_in_both_directions() {
-    // 0.022 apart with radii 0.01: a gap of 0.002.
-    let ball = Ball::new(0.01);
-    let (a, b) = (Vec2::new(0.00123, -0.0007), Vec2::new(0.016786, -0.016256));
-    assert!(!ball.at(&a).collides(&ball.at(&b)));
-    assert!(!ball.at(&b).collides(&ball.at(&a)));
-}
-
-#[test]
-#[ignore = "backlog/gjk-tolerances.md"]
-fn no_false_positives_at_small_scale() {
-    // Balls with a gap of a tenth of their radius, in 360 directions.
-    for r in [0.01f32, 0.001] {
-        for i in 0..360 {
-            let dir = Rotor2d::radians((i as f32).to_radians()) * Vec2::X;
-            let a = Vec2::new(0.123 * r, -0.07 * r);
-            let b = a + dir * (2.2 * r);
-            let ball = Ball::new(r);
-            assert!(!ball.at(&a).collides(&ball.at(&b)), "r = {r}, {i}°");
-        }
-    }
-}
-
-// backlog/support-direction.md
-
-#[test]
-#[ignore = "backlog/support-direction.md"]
-fn far_from_origin_ball_contains_point() {
-    // 0.69 apart with radius 0.94, near (1e4, -1e4).
-    let ball = Ball::new(0.942_961_9);
-    let (p, c) = (
-        Vec2::new(9997.541, -9997.661),
-        Vec2::new(9998.233, -9997.66),
-    );
-    assert!(Point.at(&p).collides(&ball.at(&c)));
-    assert!(ball.at(&c).collides(&Point.at(&p)));
-    assert!(ball.at(&c).penetrates(&Point.at(&p)).is_some());
-}
-
 // backlog/epa-2d.md
 
 #[test]
@@ -239,6 +196,108 @@ fn ball_poly_cast_hits_corner() {
         r.is_some_and(|(entry, _)| (entry - want).abs() < 1e-3),
         "toiae {r:?}"
     );
+}
+
+// Fixed bugs.
+
+/// GJK compared a cubic triple product with an absolute `1e-10`, so small shapes collided
+/// across a gap, depending on the order.
+#[test]
+fn small_balls_apart_in_both_directions() {
+    // 0.022 apart with radii 0.01: a gap of 0.002.
+    let ball = Ball::new(0.01);
+    let (a, b) = (Vec2::new(0.00123, -0.0007), Vec2::new(0.016786, -0.016256));
+    assert!(!ball.at(&a).collides(&ball.at(&b)));
+    assert!(!ball.at(&b).collides(&ball.at(&a)));
+}
+
+#[test]
+fn no_false_positives_at_small_scale() {
+    // Balls with a gap of a tenth of their radius, in 360 directions.
+    for r in [0.01f32, 0.001] {
+        for i in 0..360 {
+            let dir = Rotor2d::radians((i as f32).to_radians()) * Vec2::X;
+            let a = Vec2::new(0.123 * r, -0.07 * r);
+            let b = a + dir * (2.2 * r);
+            let ball = Ball::new(r);
+            assert!(!ball.at(&a).collides(&ball.at(&b)), "r = {r}, {i}°");
+        }
+    }
+}
+
+/// The same scenes at every scale give the same answers, scaled.
+#[test]
+fn scale_invariance() {
+    // Rotated and scaled, so `Collider::support` maps every direction.
+    let placed = |p: Vec2| {
+        Transform2d::from_translation(p)
+            .with_rotation(Rotor2d::radians(0.3))
+            .with_scale(2.0)
+    };
+    for k in [1e-6f32, 1e-3, 1.0, 1e3, 1e6] {
+        let (ball, square) = (Ball::new(k), Box2d::square(k));
+        let z = Vec2::ZERO;
+        for i in 0..24 {
+            let dir = Rotor2d::radians((15.0 * i as f32).to_radians()) * Vec2::X;
+            let (apart, overlapping) = (dir * (2.2 * k), dir * (1.8 * k));
+            let msg = format!("k = {k}, {i}");
+            assert!(!ball.at(&z).collides(&ball.at(&apart)), "{msg}");
+            assert!(!ball.at(&apart).collides(&ball.at(&z)), "{msg}");
+            assert!(ball.at(&z).collides(&ball.at(&overlapping)), "{msg}");
+            // Scaled by 2, so 0.4k apart and overlapping by 0.4k.
+            let c = Vec2::new(0.5 * k, -0.25 * k);
+            let (pa, pb) = (placed(c), placed(c + dir * (4.4 * k)));
+            assert!(!ball.at(&pa).collides(&ball.at(&pb)), "{msg}");
+            assert!(!ball.at(&pb).collides(&ball.at(&pa)), "{msg}");
+            assert!(
+                ball.at(&pa)
+                    .collides(&ball.at(&placed(c + dir * (3.6 * k)))),
+                "{msg}"
+            );
+        }
+        // Squares overlapping by 0.2k along x, and 0.2k apart.
+        let p = square
+            .at(&z)
+            .penetrates(&square.at(&Vec2::new(1.8 * k, 0.3 * k)));
+        assert!(
+            p.is_some_and(|p| (p - Vec2::new(-0.2 * k, 0.0)).length() < 1e-4 * k),
+            "k = {k}: {p:?}"
+        );
+        let apart = Vec2::new(2.2 * k, 0.3 * k);
+        assert!(!square.at(&z).collides(&square.at(&apart)), "k = {k}");
+    }
+}
+
+/// Coincident points touch, as they do in 3D.
+#[test]
+fn coincident_points_touch() {
+    for p in [Vec2::ZERO, Vec2::new(3.0, -2.0)] {
+        assert!(Point.at(&p).collides(&Point.at(&p)), "{p}");
+        assert_eq!(
+            Point.at(&p).penetrates(&Point.at(&p)),
+            Some(Vec2::ZERO),
+            "{p}"
+        );
+        let dot = Ball::new(0.0);
+        assert!(dot.at(&p).collides(&dot.at(&p)), "{p}");
+        assert!(Point.at(&p).collides(&dot.at(&p)), "{p}");
+        assert!(!Point.at(&p).collides(&Point.at(&(p + Vec2::X))), "{p}");
+    }
+}
+
+/// Far from the origin, `Collider::support` blurred GJK's short search directions. They are
+/// now as long as the shapes, which is enough at 1e4.
+#[test]
+fn far_from_origin_ball_contains_point() {
+    // 0.69 apart with radius 0.94, near (1e4, -1e4).
+    let ball = Ball::new(0.942_961_9);
+    let (p, c) = (
+        Vec2::new(9997.541, -9997.661),
+        Vec2::new(9998.233, -9997.66),
+    );
+    assert!(Point.at(&p).collides(&ball.at(&c)));
+    assert!(ball.at(&c).collides(&Point.at(&p)));
+    assert!(ball.at(&c).penetrates(&Point.at(&p)).is_some());
 }
 
 // backlog/bevy-uneven-scale.md
