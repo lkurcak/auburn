@@ -56,6 +56,130 @@ fn ball_poly_cast_hits_corner() {
 
 // Fixed bugs.
 
+/// Bevy's `Transform` went through `Transform2d`, keeping only its largest scale, z included.
+/// It now acts on the plane z = 0 with its own x and y scale.
+#[cfg(feature = "bevy")]
+mod bevy_transform {
+    use super::*;
+    use bevy::prelude::{Quat, Transform, Vec3};
+    use std::sync::Arc;
+
+    #[test]
+    fn uneven_scale_box() {
+        // Box2d(1) under scale (1, 3, 1) covers x in [-1, 1] and y in [-3, 3].
+        let t = Transform::from_scale(Vec3::new(1.0, 3.0, 1.0));
+        let inside = Transform::from_xyz(0.0, 2.5, 0.0);
+        let outside = Transform::from_xyz(2.5, 0.0, 0.0);
+        assert!(Point.at(&inside).collides(&Box2d::square(1.0).at(&t)));
+        assert!(!Point.at(&outside).collides(&Box2d::square(1.0).at(&t)));
+    }
+
+    #[test]
+    fn z_scale_does_not_leak_into_2d() {
+        let t = Transform::from_scale(Vec3::new(1.0, 1.0, 5.0));
+        let outside = Transform::from_xyz(2.5, 0.0, 0.0);
+        assert!(!Point.at(&outside).collides(&Box2d::square(1.0).at(&t)));
+    }
+
+    #[test]
+    fn mirrored_triangle() {
+        let triangle = Poly2d::new(Arc::new(vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(2.0, 0.0),
+            Vec2::new(0.0, 1.0),
+        ]));
+        let t = Transform::from_scale(Vec3::new(-1.0, 1.0, 1.0));
+        let inside = Transform::from_xyz(-1.5, 0.2, 0.0);
+        assert!(Point.at(&inside).collides(&triangle.at(&t)));
+    }
+
+    #[test]
+    fn uneven_scale_ball() {
+        // Ball(1) under scale (1, 4, 1): an ellipse. Its support along (1, 1) is the point
+        // maximising x + y.
+        let t = Transform::from_scale(Vec3::new(1.0, 4.0, 1.0));
+        let ball = Ball::new(1.0);
+        let s = ball.at(&t).support(Vec2::ONE);
+        let want = Vec2::new(1.0, 16.0) / 17f32.sqrt();
+        assert!((s - want).length() < 1e-4, "{s:?}, want {want:?}");
+        // 0.36 + 0.36 < 1 is inside; 0.64 + 0.4225 > 1 is outside.
+        assert!(Point.at(&Vec2::new(0.6, 2.4)).collides(&ball.at(&t)));
+        assert!(!Point.at(&Vec2::new(0.8, 2.6)).collides(&ball.at(&t)));
+    }
+
+    #[test]
+    fn z_translation_does_not_move_2d_shapes() {
+        let a = Transform::from_xyz(0.0, 0.0, 10.0);
+        let b = Transform::from_xyz(1.5, 0.0, -3.0);
+        let square = Box2d::square(1.0);
+        assert!(square.at(&a).collides(&square.at(&b)));
+        let pen = square.at(&a).penetrates(&square.at(&b)).unwrap();
+        assert!((pen - Vec2::new(-0.5, 0.0)).length() < 1e-4, "{pen:?}");
+    }
+
+    /// A rotation off the z axis shows the shape as a 2D camera does, seen down the z axis.
+    #[test]
+    fn rotation_off_the_z_axis_projects() {
+        // 60° about y halves the square's width.
+        let t = Transform::from_rotation(Quat::from_rotation_y(std::f32::consts::FRAC_PI_3));
+        let square = Box2d::square(1.0);
+        assert!(Point.at(&Vec2::new(0.4, 0.9)).collides(&square.at(&t)));
+        assert!(!Point.at(&Vec2::new(0.6, 0.0)).collides(&square.at(&t)));
+        // A half turn about y mirrors x.
+        let triangle = Poly2d::new(Arc::new(vec![
+            Vec2::new(0.0, 0.0),
+            Vec2::new(2.0, 0.0),
+            Vec2::new(0.0, 1.0),
+        ]));
+        let t = Transform::from_rotation(Quat::from_rotation_y(std::f32::consts::PI));
+        assert!(Point.at(&Vec2::new(-1.5, 0.2)).collides(&triangle.at(&t)));
+        assert!(!Point.at(&Vec2::new(1.5, 0.2)).collides(&triangle.at(&t)));
+    }
+
+    #[test]
+    fn inverse_undoes_a_mirror_and_an_uneven_scale() {
+        let p = Vec2::new(0.3, -1.7);
+        for t in [
+            Transform::from_xyz(1.0, 2.0, 3.0)
+                .with_rotation(Quat::from_rotation_z(0.7))
+                .with_scale(Vec3::new(-2.0, 2.0, 2.0)),
+            Transform::from_xyz(-4.0, 0.5, 0.0)
+                .with_rotation(Quat::from_rotation_z(std::f32::consts::FRAC_PI_2))
+                .with_scale(Vec3::new(1.0, 3.0, 0.5)),
+        ] {
+            let back = Transformation2d::inverse(&t).apply(t.apply(p));
+            assert!((back - p).length() < 1e-5, "{t:?}: {back:?}, want {p:?}");
+        }
+    }
+
+    #[test]
+    fn compose_applies_both() {
+        let a = Transform::from_xyz(1.0, 2.0, 3.0)
+            .with_rotation(Quat::from_rotation_z(0.7))
+            .with_scale(Vec3::splat(2.0));
+        let b = Transform::from_xyz(-4.0, 0.5, 1.0)
+            .with_rotation(Quat::from_rotation_z(-1.2))
+            .with_scale(Vec3::new(-1.0, 3.0, 0.5));
+        let p = Vec2::new(0.3, -1.7);
+        let (got, want) = (
+            Transformation2d::compose(&a, &b).apply(p),
+            a.apply(b.apply(p)),
+        );
+        assert!((got - want).length() < 1e-4, "{got:?}, want {want:?}");
+    }
+
+    /// `Transform2d` has one scale, so the conversion keeps it exactly only when x and y agree.
+    #[test]
+    fn into_transform2d() {
+        let scale = |x, y, z| Transform2d::from(Transform::from_scale(Vec3::new(x, y, z))).scale;
+        assert_eq!(scale(2.0, 2.0, 7.0), 2.0);
+        // A half turn.
+        assert_eq!(scale(-1.0, -1.0, 1.0), -1.0);
+        // Uneven: the larger magnitude, which covers a ball.
+        assert_eq!(scale(1.0, -3.0, 9.0), 3.0);
+    }
+}
+
 /// `Poly2d::regular` went clockwise, and the Point–Poly2d casts at rest checked for a
 /// counter-clockwise polygon, so a point at the centre of a hexagon wasn't in it. No `Poly2d`
 /// query depends on the winding now, and `regular` goes counter-clockwise.
@@ -497,45 +621,4 @@ fn uneven_scale_support() {
     let s = Ball::new(1.0).at(&e).support(Vec2::ONE);
     let want = Vec2::new(1.0, 16.0) / 17f32.sqrt();
     assert!((s - want).length() < 1e-4, "{s:?}, want {want:?}");
-}
-
-// backlog/bevy-uneven-scale.md
-
-#[cfg(feature = "bevy")]
-mod bevy_transform {
-    use super::*;
-    use bevy::prelude::{Transform, Vec3};
-    use std::sync::Arc;
-
-    #[test]
-    #[ignore = "backlog/bevy-uneven-scale.md"]
-    fn uneven_scale_box() {
-        // Box2d(1) under scale (1, 3, 1) covers x in [-1, 1] and y in [-3, 3].
-        let t = Transform::from_scale(Vec3::new(1.0, 3.0, 1.0));
-        let inside = Transform::from_xyz(0.0, 2.5, 0.0);
-        let outside = Transform::from_xyz(2.5, 0.0, 0.0);
-        assert!(Point.at(&inside).collides(&Box2d::square(1.0).at(&t)));
-        assert!(!Point.at(&outside).collides(&Box2d::square(1.0).at(&t)));
-    }
-
-    #[test]
-    #[ignore = "backlog/bevy-uneven-scale.md"]
-    fn z_scale_does_not_leak_into_2d() {
-        let t = Transform::from_scale(Vec3::new(1.0, 1.0, 5.0));
-        let outside = Transform::from_xyz(2.5, 0.0, 0.0);
-        assert!(!Point.at(&outside).collides(&Box2d::square(1.0).at(&t)));
-    }
-
-    #[test]
-    #[ignore = "backlog/bevy-uneven-scale.md"]
-    fn mirrored_triangle() {
-        let triangle = Poly2d::new(Arc::new(vec![
-            Vec2::new(0.0, 0.0),
-            Vec2::new(2.0, 0.0),
-            Vec2::new(0.0, 1.0),
-        ]));
-        let t = Transform::from_scale(Vec3::new(-1.0, 1.0, 1.0));
-        let inside = Transform::from_xyz(-1.5, 0.2, 0.0);
-        assert!(Point.at(&inside).collides(&triangle.at(&t)));
-    }
 }

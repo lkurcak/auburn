@@ -2,9 +2,8 @@
 
 Do this after the benchmarks exist.
 
-- `Collider::support` computes `isometry.inverse()` twice per support call.
-- A bevy `Transform` is converted to `Transform2d` on every apply/inverse.
-- Compute the inverse once per query.
+- The default `Transformation2d::support_direction` computes `inverse()` on every support
+  call, for user types that don't implement it. Compute the inverse once per query.
 - The `Transform2d` Poly2d casts collect each polygon's world-space vertices into a `Vec` on
   every call. The `Vec2` ones work in the polygon's frame and don't.
 - 3D EPA looks for the closest face by scanning every face, removed ones too; a heap would

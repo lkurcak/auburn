@@ -373,7 +373,8 @@ fn points_on_flat_boxes() {
 #[cfg(feature = "bevy")]
 mod bevy_transform {
     use super::*;
-    use bevy::prelude::Transform;
+    use auburn3d::transformation::Transform3d;
+    use bevy::prelude::{EulerRot, Quat, Transform};
 
     #[test]
     fn uneven_scale_ball() {
@@ -406,6 +407,34 @@ mod bevy_transform {
                 .at(&Vec3::new(0.5, 3.5, 0.0))
                 .collides(&Box3d::cube(1.0).at(&t))
         );
+    }
+
+    /// `inverse` went through `Transform3d`, keeping only the largest scale.
+    #[test]
+    fn inverse_undoes_a_mirror_and_an_uneven_scale() {
+        let p = Vec3::new(0.3, -1.7, 2.2);
+        for t in [
+            Transform::from_xyz(1.0, 2.0, 3.0)
+                .with_rotation(Quat::from_euler(EulerRot::XYZ, 0.7, -0.4, 1.9))
+                .with_scale(Vec3::new(-2.0, 2.0, 2.0)),
+            Transform::from_xyz(-4.0, 0.5, 0.0)
+                .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2))
+                .with_scale(Vec3::new(1.0, 3.0, 0.5)),
+        ] {
+            let back = Transformation3d::inverse(&t).apply(t.apply(p));
+            assert!((back - p).length() < 1e-5, "{t:?}: {back:?}, want {p:?}");
+        }
+    }
+
+    /// `Transform3d` has one scale, so the conversion keeps it exactly only when every axis
+    /// agrees.
+    #[test]
+    fn into_transform3d() {
+        let scale = |x, y, z| Transform3d::from(Transform::from_scale(Vec3::new(x, y, z))).scale;
+        assert_eq!(scale(-2.0, -2.0, -2.0), -2.0);
+        // Uneven: the largest magnitude, which covers a ball.
+        assert_eq!(scale(-1.0, -1.0, 0.5), 1.0);
+        assert_eq!(scale(1.0, -4.0, 1.0), 4.0);
     }
 }
 
