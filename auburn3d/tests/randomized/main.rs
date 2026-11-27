@@ -124,21 +124,11 @@ mod penetrates {
     use super::*;
     static_test!(
         vec3: penetrates @ Vec3, Config::BASE,
-        [Point-Ball, Point-Box3d, Ball-Ball, Box3d-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/gjk-3d-cycling.md"]
-        vec3_gjk: penetrates @ Vec3, Config::BASE,
-        [Ball-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         pos3d: penetrates @ Pos3d, Config::BASE,
-        [Point-Ball, Point-Box3d, Ball-Ball, Box3d-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/gjk-3d-cycling.md"]
-        pos3d_gjk: penetrates @ Pos3d, Config::BASE,
-        [Ball-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         scale_translate3d: penetrates @ ScaleTranslate3d, Config::BASE,
@@ -154,12 +144,7 @@ mod penetrates {
     );
     static_test!(
         transform3d_mirrored: penetrates @ Transform3d, Config::MIRRORED,
-        [Point-Ball, Point-Box3d, Ball-Ball, Box3d-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/gjk-3d-cycling.md"]
-        transform3d_mirrored_gjk: penetrates @ Transform3d, Config::MIRRORED,
-        [Ball-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         transform3d_tiny: penetrates @ Transform3d, Config::TINY,

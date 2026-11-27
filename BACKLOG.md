@@ -2,7 +2,6 @@
 
 ## Now
 
-1. [3D GJK cycles and misses shallow overlaps](backlog/gjk-3d-cycling.md)
 1. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
 1. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
 1. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
@@ -39,9 +38,12 @@
 - no_std. Tried and reverted in 2024; the CI no-std job exists but is skipped. Low priority.
 - `cargo test --no-default-features --features bevy` doesn't compile: `tests/randomized` in both
   crates imports `glam` directly. CI doesn't run that combination.
+- With `--all-features`, cargo warns that the optional `glam` dependency is unused in both crates,
+  because bevy's `Vec3` wins (cargo's `unused_dependencies` lint).
 
 ## Done
 
+- 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#PR)
 - 3D EPA orients faces by their winding and keeps its polytope closed, so balls get their depth (#21)
 - `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)
 - GJK and EPA tolerances scale with the shapes (#18)
