@@ -1,162 +1,42 @@
+//! A ball under a [`Transform2d`] is a ball of radius `radius * |scale|` at the transform's
+//! position: rotation doesn't change it, and a negative uniform scale in 2D is a half turn. So
+//! these casts hand the world-space shapes to the exact [`Vec2`] casts.
+
 use crate::Vec2;
 use crate::collider::Collider;
 use crate::relation::cast::{
     TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
 };
 use crate::shape::{ball::Ball, point::Point};
-use crate::transformation::{Transform2d, Transformation2d};
+use crate::transformation::Transform2d;
 
-impl TimeOfImpact<Collider<'_, Ball, Transform2d>> for Collider<'_, Point, Transform2d> {
-    fn toi(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<f32> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
+/// The ball as it is in world space: its radius scaled by `|scale|`.
+pub(super) fn world_ball(ball: &Collider<'_, Ball, Transform2d>) -> Ball {
+    Ball::new(ball.shape.radius * ball.isometry.scale.abs())
+}
 
-        let other_radius = other.shape.radius * other.isometry.scale;
-
-        let dd = d.dot(d);
-        if dd < other_radius * other_radius {
-            return Some(0.0);
-        }
-
-        let a = vel.dot(vel);
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other_radius * other_radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            if t1 > 0.0 {
-                Some(t1)
-            } else if t2 > 0.0 {
-                Some(0.0)
-            } else {
-                None
+macro_rules! point_ball_impls {
+    ($($Trait:ident::$method:ident -> $Out:ty;)*) => {$(
+        impl $Trait<Collider<'_, Ball, Transform2d>> for Collider<'_, Point, Transform2d> {
+            fn $method(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<$Out> {
+                let ball = world_ball(other);
+                let other = Collider::new(&ball, &other.isometry.pos);
+                Collider::new(&Point, &self.isometry.pos).$method(&other, vel)
             }
         }
-    }
-}
-impl TimeOfImpact<Collider<'_, Point, Transform2d>> for Collider<'_, Ball, Transform2d> {
-    fn toi(&self, other: &Collider<'_, Point, Transform2d>, vel: Vec2) -> Option<f32> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.toi(&b, vel)
-    }
-}
-impl TimeOfImpactAndExit<Collider<'_, Ball, Transform2d>> for Collider<'_, Point, Transform2d> {
-    fn toiae(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<(f32, f32)> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
-
-        let other_radius = other.shape.radius * other.isometry.scale;
-
-        let dd = d.dot(d);
-        if dd < other_radius * other_radius {
-            return Some((0.0, 0.0));
-        }
-
-        let a = vel.dot(vel);
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other_radius * other_radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            if t2 < 0.0 {
-                None
-            } else {
-                let toi = t1.max(0.0);
-                let toe = t2;
-                Some((toi, toe))
+        impl $Trait<Collider<'_, Point, Transform2d>> for Collider<'_, Ball, Transform2d> {
+            fn $method(&self, other: &Collider<'_, Point, Transform2d>, vel: Vec2) -> Option<$Out> {
+                let ball = world_ball(self);
+                let other = Collider::new(&Point, &other.isometry.pos);
+                Collider::new(&ball, &self.isometry.pos).$method(&other, vel)
             }
         }
-    }
+    )*};
 }
-impl TimeOfImpactAndExit<Collider<'_, Point, Transform2d>> for Collider<'_, Ball, Transform2d> {
-    fn toiae(&self, other: &Collider<'_, Point, Transform2d>, vel: Vec2) -> Option<(f32, f32)> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.toiae(&b, vel)
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Ball, Transform2d>>
-    for Collider<'_, Point, Transform2d>
-{
-    fn tttoi(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<f32> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
 
-        let other_radius = other.shape.radius * other.isometry.scale;
-
-        let dd = d.dot(d);
-
-        let a = vel.dot(vel);
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other_radius * other_radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            Some(t1.min(t2))
-        }
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Point, Transform2d>>
-    for Collider<'_, Ball, Transform2d>
-{
-    fn tttoi(&self, other: &Collider<'_, Point, Transform2d>, vel: Vec2) -> Option<f32> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.tttoi(&b, vel)
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Ball, Transform2d>>
-    for Collider<'_, Point, Transform2d>
-{
-    fn tttoiae(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<(f32, f32)> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
-
-        let other_radius = other.shape.radius * other.isometry.scale;
-
-        let dd = d.dot(d);
-
-        let a = vel.dot(vel);
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other_radius * other_radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            Some((t1, t2))
-        }
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Point, Transform2d>>
-    for Collider<'_, Ball, Transform2d>
-{
-    fn tttoiae(&self, other: &Collider<'_, Point, Transform2d>, vel: Vec2) -> Option<(f32, f32)> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.tttoiae(&b, vel)
-    }
+point_ball_impls! {
+    TimeOfImpact::toi -> f32;
+    TimeOfImpactAndExit::toiae -> (f32, f32);
+    TimeTravelingTimeOfImpact::tttoi -> f32;
+    TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32);
 }
