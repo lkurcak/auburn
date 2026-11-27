@@ -2,7 +2,6 @@
 
 ## Now
 
-1. [`Poly2d` robustness: winding, epsilons, `area`, empty polygons](backlog/poly2d-robustness.md)
 1. Remove `From<ScaleTranslate2d> for bevy Isometry2d` (bevy feature): its body is `todo!()`, so it can only panic. Removing it is technically breaking.
 1. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
 1. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
@@ -40,6 +39,7 @@
 
 ## Done
 
+- `Poly2d` casts are one swept SAT that ignores winding and has no absolute tolerances, so tiny and clockwise polygons work; `regular` is counter-clockwise, `area` works, an empty polygon is a point at its origin, and debug builds check convexity (#27)
 - Ball and point casts read off one overlap span: no NaN at rest, negative time-traveling times in 3D, tiny velocities, Point–Point through-paths; the at-rest answers are documented and every pair gives them (#26)
 - `Transform2d` ball casts scale each radius once, by its own |scale|, and ball `toiae` gives the exit when starting inside; box casts take |scale| too (#25)
 - 2D EPA returns the shortest support distance it finds, so deep, near-concentric balls get their depth and direction (#24)

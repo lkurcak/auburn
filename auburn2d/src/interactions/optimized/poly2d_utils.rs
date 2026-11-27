@@ -1,164 +1,115 @@
+//! Casts against convex polygons, by the separating axis theorem.
+//!
+//! Two convex shapes overlap while their spans overlap along every axis that could separate
+//! them. For polygons those are the normals of their edges. X and Y are tested too, so that a
+//! polygon with fewer than three vertices is the segment or point it looks like, not a line or
+//! the whole plane. An axis that isn't needed never changes the answer.
+//!
+//! Nothing here depends on which way round the vertices go, or on how long the axes are, so
+//! there is no tolerance to tune for the shapes' size.
+
+use super::vec2::box_point::slab;
 use crate::Vec2;
+use crate::relation::cast::is_at_rest;
 
-/// Check if a point is inside or on the boundary of a convex polygon.
-pub fn point_in_convex_polygon(point: Vec2, vertices: &[Vec2]) -> bool {
-    let n = vertices.len();
-    if n < 3 {
-        return false;
-    }
-    for i in 0..n {
-        let j = (i + 1) % n;
-        let edge = vertices[j] - vertices[i];
-        let to_point = point - vertices[i];
-        // For a CCW polygon, the interior is to the left of each edge.
-        if edge.perp_dot(to_point) < -1e-6 {
-            return false;
-        }
-    }
-    true
+/// A normal to each edge of the polygon through `vertices`, not normalized.
+pub(crate) fn edge_normals(vertices: &[Vec2]) -> impl Iterator<Item = Vec2> + '_ {
+    let next = vertices.iter().cycle().skip(1);
+    vertices.iter().zip(next).map(|(&p, &q)| (q - p).perp())
 }
 
-/// Collect all times t where the ray `origin + vel * t` intersects an edge of the convex polygon.
-fn ray_polygon_times(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Vec<f32> {
-    let mut times = Vec::new();
-    let n = vertices.len();
-    for i in 0..n {
-        let p1 = vertices[i];
-        let p2 = vertices[(i + 1) % n];
-        let edge = p2 - p1;
-        let r = origin - p1;
-        let denom = vel.perp_dot(edge);
-        if denom.abs() < 1e-10 {
-            continue;
-        }
-        let t = -r.perp_dot(edge) / denom;
-        let s = vel.perp_dot(r) / denom;
-        if (-1e-6..=1.0 + 1e-6).contains(&s) {
-            times.push(t);
-        }
-    }
-    times
+/// The span of `vertices` along `axis`.
+pub(crate) fn project(vertices: &[Vec2], axis: Vec2) -> (f32, f32) {
+    vertices
+        .iter()
+        .fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), p| {
+            let d = p.dot(axis);
+            (lo.min(d), hi.max(d))
+        })
 }
 
-/// Unbounded TOI for a moving point vs a convex polygon.
-/// Returns the earliest intersection time (can be negative).
-pub fn point_poly_tttoi(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<f32> {
-    if vel.length_squared() < 1e-10 {
-        return point_in_convex_polygon(origin, vertices).then_some(f32::NEG_INFINITY);
-    }
-    let times = ray_polygon_times(origin, vel, vertices);
-    if times.is_empty() {
-        return None;
-    }
-    Some(times.iter().copied().fold(f32::INFINITY, f32::min))
-}
-
-/// Unbounded TOI and exit for a moving point vs a convex polygon.
-pub fn point_poly_tttoiae(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<(f32, f32)> {
-    if vel.length_squared() < 1e-10 {
-        return point_in_convex_polygon(origin, vertices)
-            .then_some((f32::NEG_INFINITY, f32::INFINITY));
-    }
-    let times = ray_polygon_times(origin, vel, vertices);
-    if times.is_empty() {
-        return None;
-    }
-    let min_t = times.iter().copied().fold(f32::INFINITY, f32::min);
-    let max_t = times.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    Some((min_t, max_t))
-}
-
-/// Bounded TOI for a moving point vs a convex polygon.
-pub fn point_poly_toi(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<f32> {
-    if vel.length_squared() < 1e-10 {
-        return point_in_convex_polygon(origin, vertices).then_some(0.0);
-    }
-    let times = ray_polygon_times(origin, vel, vertices);
-    if times.is_empty() {
-        return None;
-    }
-    let min_t = times.iter().copied().fold(f32::INFINITY, f32::min);
-    let max_t = times.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    if min_t <= 0.0 && max_t >= 0.0 {
-        Some(0.0)
-    } else if min_t > 0.0 {
-        Some(min_t)
-    } else {
-        None
-    }
-}
-
-/// Bounded TOI and exit for a moving point vs a convex polygon.
-pub fn point_poly_toiae(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<(f32, f32)> {
-    if vel.length_squared() < 1e-10 {
-        return point_in_convex_polygon(origin, vertices).then_some((0.0, f32::INFINITY));
-    }
-    let times = ray_polygon_times(origin, vel, vertices);
-    if times.is_empty() {
-        return None;
-    }
-    let min_t = times.iter().copied().fold(f32::INFINITY, f32::min);
-    let max_t = times.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-    if min_t <= 0.0 && max_t >= 0.0 {
-        Some((0.0, max_t))
-    } else if min_t > 0.0 {
-        Some((min_t, max_t))
-    } else {
-        None
-    }
-}
-
-// --- Swept SAT helpers ---
-
-/// Given two 1D intervals and relative velocity along that axis, returns the time interval
-/// during which the intervals overlap. If they can never overlap, returns None.
-fn axis_overlap_interval(
-    min_a: f32,
-    max_a: f32,
-    min_b: f32,
-    max_b: f32,
-    v: f32,
-) -> Option<(f32, f32)> {
-    if v.abs() < 1e-10 {
-        if max_a < min_b || min_a > max_b {
-            return None;
-        }
-        Some((f32::NEG_INFINITY, f32::INFINITY))
-    } else {
-        let t1 = (max_b - min_a) / v;
-        let t2 = (min_b - max_a) / v;
-        Some((t1.min(t2), t1.max(t2)))
-    }
-}
-
-/// Swept SAT for two shapes given as projection functions and a list of separating axes.
-/// Returns the unbounded overlap interval (t_enter, t_exit).
-pub fn swept_sat_ttoiae<F1, F2>(
-    get_proj_a: F1,
-    get_proj_b: F2,
-    axes: &[Vec2],
+/// When a shape moving at `vel` overlaps another, over all of time (touching counts): from
+/// when to when, or `None` if never.
+///
+/// `span_a` and `span_b` give each shape's span along an axis. `axes` has to hold the normals
+/// of both shapes' edges; X and Y are added here.
+pub(crate) fn swept_sat(
+    span_a: impl Fn(Vec2) -> (f32, f32),
+    span_b: impl Fn(Vec2) -> (f32, f32),
+    axes: impl IntoIterator<Item = Vec2>,
     vel: Vec2,
-) -> Option<(f32, f32)>
-where
-    F1: Fn(Vec2) -> (f32, f32),
-    F2: Fn(Vec2) -> (f32, f32),
-{
-    let mut t_enter = f32::NEG_INFINITY;
-    let mut t_exit = f32::INFINITY;
-
-    for &axis in axes {
-        let (min_a, max_a) = get_proj_a(axis);
-        let (min_b, max_b) = get_proj_b(axis);
-        let v = vel.dot(axis);
-
-        let (t0, t1) = axis_overlap_interval(min_a, max_a, min_b, max_b, v)?;
-        t_enter = t_enter.max(t0);
-        t_exit = t_exit.min(t1);
-
-        if t_enter > t_exit {
+) -> Option<(f32, f32)> {
+    // At rest is at rest along every axis, however long.
+    let vel = if is_at_rest(vel) { Vec2::ZERO } else { vel };
+    let (mut enter, mut exit) = (f32::NEG_INFINITY, f32::INFINITY);
+    for axis in axes.into_iter().chain([Vec2::X, Vec2::Y]) {
+        let (min_a, max_a) = span_a(axis);
+        let (min_b, max_b) = span_b(axis);
+        let (axis_enter, axis_exit) = slab(min_b - max_a, max_b - min_a, vel.dot(axis))?;
+        enter = enter.max(axis_enter);
+        exit = exit.min(axis_exit);
+        if enter > exit {
             return None;
         }
     }
-
-    Some((t_enter, t_exit))
+    Some((enter, exit))
 }
+
+/// When a point at `p`, moving at `vel`, is in the convex polygon through `vertices`, over all
+/// of time (touching counts): from when to when, or `None` if never.
+pub(crate) fn point_polygon(p: Vec2, vertices: &[Vec2], vel: Vec2) -> Option<(f32, f32)> {
+    let span_p = |axis: Vec2| {
+        let d = p.dot(axis);
+        (d, d)
+    };
+    let span_poly = |axis| project(vertices, axis);
+    swept_sat(span_p, span_poly, edge_normals(vertices), vel)
+}
+
+/// The four casts between `Collider<$A, $T>` and `Collider<$B, $T>`, both ways round, read off
+/// `$span(a, b, vel)`: when `a`, moving at `vel`, overlaps `b`. Given one shape, the casts
+/// between two of it.
+macro_rules! casts_from_span {
+    ($A:ty, $B:ty, $T:ty, $span:path) => {
+        $crate::interactions::optimized::poly2d_utils::casts_from_span!(
+            @each $A, $B, $T, |a, b, vel| $span(a, b, vel)
+        );
+        // `b` moving at `vel` is `a` moving at `-vel`.
+        $crate::interactions::optimized::poly2d_utils::casts_from_span!(
+            @each $B, $A, $T, |b, a, vel: $crate::Vec2| $span(a, b, -vel)
+        );
+    };
+    ($A:ty, $T:ty, $span:path) => {
+        $crate::interactions::optimized::poly2d_utils::casts_from_span!(
+            @each $A, $A, $T, |a, b, vel| $span(a, b, vel)
+        );
+    };
+    (@each $A:ty, $B:ty, $T:ty, $span:expr) => {
+        $crate::interactions::optimized::poly2d_utils::casts_from_span!(
+            @cast $A, $B, $T, $span,
+            TimeOfImpact::toi -> f32,
+            TimeOfImpactAndExit::toiae -> (f32, f32),
+            TimeTravelingTimeOfImpact::tttoi -> f32,
+            TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32)
+        );
+    };
+    (@cast $A:ty, $B:ty, $T:ty, $span:expr, $($Trait:ident::$method:ident -> $Out:ty),*) => {$(
+        impl $crate::relation::cast::$Trait<$crate::collider::Collider<'_, $B, $T>>
+            for $crate::collider::Collider<'_, $A, $T>
+        {
+            fn $method(
+                &self,
+                other: &$crate::collider::Collider<'_, $B, $T>,
+                vel: $crate::Vec2,
+            ) -> Option<$Out> {
+                let span: fn(
+                    &$crate::collider::Collider<'_, $A, $T>,
+                    &$crate::collider::Collider<'_, $B, $T>,
+                    $crate::Vec2,
+                ) -> Option<(f32, f32)> = $span;
+                $crate::relation::cast::from_span::$method(span(self, other, vel))
+            }
+        }
+    )*};
+}
+pub(crate) use casts_from_span;

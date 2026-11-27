@@ -5,7 +5,7 @@ use crate::algorithm::toi::{
 };
 use crate::collider::Collider;
 use crate::interactions::optimized::poly2d_utils::{
-    point_poly_toi, point_poly_toiae, point_poly_tttoi, point_poly_tttoiae, swept_sat_ttoiae,
+    casts_from_span, edge_normals, point_polygon, project, swept_sat,
 };
 use crate::prelude::{Ball, Box2d, Point, Poly2d};
 use crate::property::support::Support;
@@ -14,109 +14,23 @@ use crate::relation::cast::{
 };
 use crate::transformation::Transformation2d;
 
+// Each overlap is worked out in the polygon's frame, where its vertices are as given.
+
 // ============================================================================
 // Poly2d vs Point
 // ============================================================================
 
-impl TimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Point, Vec2> {
-    fn toi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let origin = self.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = other
-            .shape
-            .points
-            .iter()
-            .map(|&p| *other.isometry + p)
-            .collect();
-        point_poly_toi(origin, vel, &vertices)
-    }
-}
-impl TimeOfImpact<Collider<'_, Point, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn toi(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<f32> {
-        let origin = other.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = self
-            .shape
-            .points
-            .iter()
-            .map(|&p| *self.isometry + p)
-            .collect();
-        point_poly_toi(origin, -vel, &vertices)
-    }
+/// When `point`, moving at `vel`, is in `poly`, over all of time.
+fn point_poly(
+    point: &Collider<'_, Point, Vec2>,
+    poly: &Collider<'_, Poly2d, Vec2>,
+    vel: Vec2,
+) -> Option<(f32, f32)> {
+    let p = point.isometry.apply_to_origin() - poly.isometry.apply_to_origin();
+    point_polygon(p, poly.shape.vertices(), vel)
 }
 
-impl TimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>> for Collider<'_, Point, Vec2> {
-    fn toiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let origin = self.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = other
-            .shape
-            .points
-            .iter()
-            .map(|&p| *other.isometry + p)
-            .collect();
-        point_poly_toiae(origin, vel, &vertices)
-    }
-}
-impl TimeOfImpactAndExit<Collider<'_, Point, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn toiae(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let origin = other.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = self
-            .shape
-            .points
-            .iter()
-            .map(|&p| *self.isometry + p)
-            .collect();
-        point_poly_toiae(origin, -vel, &vertices)
-    }
-}
-
-impl TimeTravelingTimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Point, Vec2> {
-    fn tttoi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let origin = self.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = other
-            .shape
-            .points
-            .iter()
-            .map(|&p| *other.isometry + p)
-            .collect();
-        point_poly_tttoi(origin, vel, &vertices)
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Point, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn tttoi(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<f32> {
-        let origin = other.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = self
-            .shape
-            .points
-            .iter()
-            .map(|&p| *self.isometry + p)
-            .collect();
-        point_poly_tttoi(origin, -vel, &vertices)
-    }
-}
-
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>> for Collider<'_, Point, Vec2> {
-    fn tttoiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let origin = self.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = other
-            .shape
-            .points
-            .iter()
-            .map(|&p| *other.isometry + p)
-            .collect();
-        point_poly_tttoiae(origin, vel, &vertices)
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Point, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn tttoiae(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let origin = other.isometry.apply_to_origin();
-        let vertices: Vec<Vec2> = self
-            .shape
-            .points
-            .iter()
-            .map(|&p| *self.isometry + p)
-            .collect();
-        point_poly_tttoiae(origin, -vel, &vertices)
-    }
-}
+casts_from_span!(Point, Poly2d, Vec2, point_poly);
 
 // ============================================================================
 // Poly2d vs Ball  (kept as conservative advancement – exact ball-poly is complex)
@@ -201,208 +115,47 @@ poly2d_ball_impls!();
 // Poly2d vs Box2d
 // ============================================================================
 
-fn poly_box_sat(
-    box_collider: &Collider<'_, Box2d, Vec2>,
-    poly_collider: &Collider<'_, Poly2d, Vec2>,
+/// When `bx`, moving at `vel`, overlaps `poly`, over all of time.
+fn box_poly(
+    bx: &Collider<'_, Box2d, Vec2>,
+    poly: &Collider<'_, Poly2d, Vec2>,
     vel: Vec2,
 ) -> Option<(f32, f32)> {
-    let poly_axes: Vec<Vec2> = poly_collider
-        .shape
-        .points
-        .iter()
-        .enumerate()
-        .map(|(i, p)| {
-            let j = (i + 1) % poly_collider.shape.points.len();
-            let q = poly_collider.shape.points[j];
-            Vec2::new(-(q.y - p.y), q.x - p.x)
-        })
-        .collect();
-
-    let mut axes = poly_axes;
-    axes.push(Vec2::X);
-    axes.push(Vec2::Y);
-
-    let get_proj_poly = |axis: Vec2| {
-        let offset = poly_collider.isometry.dot(axis);
-        let mut min = f32::INFINITY;
-        let mut max = f32::NEG_INFINITY;
-        for &p in poly_collider.shape.points.iter() {
-            let proj = p.dot(axis) + offset;
-            if proj < min {
-                min = proj;
-            }
-            if proj > max {
-                max = proj;
-            }
-        }
-        (min, max)
+    let centre = bx.isometry.apply_to_origin() - poly.isometry.apply_to_origin();
+    let half = bx.shape.half_size;
+    let span_box = |axis: Vec2| {
+        let (c, r) = (centre.dot(axis), half.dot(axis.abs()));
+        (c - r, c + r)
     };
-
-    let get_proj_box = |axis: Vec2| {
-        let offset = box_collider.isometry.dot(axis);
-        let hx = box_collider.shape.half_size.x;
-        let hy = box_collider.shape.half_size.y;
-        let min = -hx * axis.x.abs() - hy * axis.y.abs() + offset;
-        let max = hx * axis.x.abs() + hy * axis.y.abs() + offset;
-        (min, max)
-    };
-
-    swept_sat_ttoiae(get_proj_box, get_proj_poly, &axes, vel)
+    let vertices = poly.shape.vertices();
+    let span_poly = |axis| project(vertices, axis);
+    swept_sat(span_box, span_poly, edge_normals(vertices), vel)
 }
 
-impl TimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Box2d, Vec2> {
-    fn toi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let (t_enter, t_exit) = poly_box_sat(self, other, vel)?;
-        if t_exit < 0.0 {
-            return None;
-        }
-        Some(t_enter.max(0.0))
-    }
-}
-impl TimeOfImpact<Collider<'_, Box2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn toi(&self, other: &Collider<'_, Box2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let (t_enter, t_exit) = poly_box_sat(other, self, -vel)?;
-        if t_exit < 0.0 {
-            return None;
-        }
-        Some(t_enter.max(0.0))
-    }
-}
-
-impl TimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>> for Collider<'_, Box2d, Vec2> {
-    fn toiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let (t_enter, t_exit) = poly_box_sat(self, other, vel)?;
-        if t_exit < 0.0 {
-            return None;
-        }
-        Some((t_enter.max(0.0), t_exit))
-    }
-}
-impl TimeOfImpactAndExit<Collider<'_, Box2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn toiae(&self, other: &Collider<'_, Box2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let (t_enter, t_exit) = poly_box_sat(other, self, -vel)?;
-        if t_exit < 0.0 {
-            return None;
-        }
-        Some((t_enter.max(0.0), t_exit))
-    }
-}
-
-impl TimeTravelingTimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Box2d, Vec2> {
-    fn tttoi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let (t_enter, _) = poly_box_sat(self, other, vel)?;
-        Some(t_enter)
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Box2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn tttoi(&self, other: &Collider<'_, Box2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let (t_enter, _) = poly_box_sat(other, self, -vel)?;
-        Some(t_enter)
-    }
-}
-
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>> for Collider<'_, Box2d, Vec2> {
-    fn tttoiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        poly_box_sat(self, other, vel)
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Box2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn tttoiae(&self, other: &Collider<'_, Box2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        poly_box_sat(other, self, -vel)
-    }
-}
+casts_from_span!(Box2d, Poly2d, Vec2, box_poly);
 
 // ============================================================================
 // Poly2d vs Poly2d
 // ============================================================================
 
-fn poly_poly_sat(
-    poly_a: &Collider<'_, Poly2d, Vec2>,
-    poly_b: &Collider<'_, Poly2d, Vec2>,
+/// When `a`, moving at `vel`, overlaps `b`, over all of time.
+fn poly_poly(
+    a: &Collider<'_, Poly2d, Vec2>,
+    b: &Collider<'_, Poly2d, Vec2>,
     vel: Vec2,
 ) -> Option<(f32, f32)> {
-    let mut axes: Vec<Vec2> = poly_a
-        .shape
-        .points
-        .iter()
-        .enumerate()
-        .map(|(i, p)| {
-            let j = (i + 1) % poly_a.shape.points.len();
-            let q = poly_a.shape.points[j];
-            Vec2::new(-(q.y - p.y), q.x - p.x)
-        })
-        .collect();
-
-    axes.extend(poly_b.shape.points.iter().enumerate().map(|(i, p)| {
-        let j = (i + 1) % poly_b.shape.points.len();
-        let q = poly_b.shape.points[j];
-        Vec2::new(-(q.y - p.y), q.x - p.x)
-    }));
-
-    let get_proj_a = |axis: Vec2| {
-        let offset = poly_a.isometry.dot(axis);
-        let mut min = f32::INFINITY;
-        let mut max = f32::NEG_INFINITY;
-        for &p in poly_a.shape.points.iter() {
-            let proj = p.dot(axis) + offset;
-            if proj < min {
-                min = proj;
-            }
-            if proj > max {
-                max = proj;
-            }
-        }
-        (min, max)
+    let offset = a.isometry.apply_to_origin() - b.isometry.apply_to_origin();
+    let (va, vb) = (a.shape.vertices(), b.shape.vertices());
+    let span_a = |axis: Vec2| {
+        let (lo, hi) = project(va, axis);
+        let d = offset.dot(axis);
+        (lo + d, hi + d)
     };
-
-    let get_proj_b = |axis: Vec2| {
-        let offset = poly_b.isometry.dot(axis);
-        let mut min = f32::INFINITY;
-        let mut max = f32::NEG_INFINITY;
-        for &p in poly_b.shape.points.iter() {
-            let proj = p.dot(axis) + offset;
-            if proj < min {
-                min = proj;
-            }
-            if proj > max {
-                max = proj;
-            }
-        }
-        (min, max)
-    };
-
-    swept_sat_ttoiae(get_proj_a, get_proj_b, &axes, vel)
+    let axes = edge_normals(va).chain(edge_normals(vb));
+    swept_sat(span_a, |axis| project(vb, axis), axes, vel)
 }
 
-impl TimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn toi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let (t_enter, t_exit) = poly_poly_sat(self, other, vel)?;
-        if t_exit < 0.0 {
-            return None;
-        }
-        Some(t_enter.max(0.0))
-    }
-}
-impl TimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn toiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let (t_enter, t_exit) = poly_poly_sat(self, other, vel)?;
-        if t_exit < 0.0 {
-            return None;
-        }
-        Some((t_enter.max(0.0), t_exit))
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn tttoi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-        let (t_enter, _) = poly_poly_sat(self, other, vel)?;
-        Some(t_enter)
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>> for Collider<'_, Poly2d, Vec2> {
-    fn tttoiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        poly_poly_sat(self, other, vel)
-    }
-}
+casts_from_span!(Poly2d, Vec2, poly_poly);
 
 #[cfg(test)]
 mod tests {

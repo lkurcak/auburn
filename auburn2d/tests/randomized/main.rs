@@ -264,20 +264,16 @@ mod toi {
     cast_test!(
         vec2_tiny: Toi @ Vec2, Config::TINY,
         [
-            Point-Point, Point-Ball, Point-Box2d, Ball-Point, Ball-Ball, Ball-Box2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Shape2d-Point, Shape2d-Ball,
-            Shape2d-Box2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
+            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
+            Box2d-Shape2d, Shape2d-Shape2d
         ]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
         vec2_tiny_shape_cast: Toi @ Vec2, Config::TINY,
         [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
-    );
-    cast_test!(
-        #[ignore = "backlog/poly2d-robustness.md"]
-        vec2_tiny_poly2d: Toi @ Vec2, Config::TINY,
-        [Point-Poly2d, Poly2d-Box2d, Poly2d-Poly2d]
     );
     cast_test!(
         vec2_huge: Toi @ Vec2, Config::HUGE,
@@ -388,20 +384,16 @@ mod toiae {
     cast_test!(
         vec2_tiny: Toiae @ Vec2, Config::TINY,
         [
-            Point-Point, Point-Ball, Point-Box2d, Ball-Point, Ball-Ball, Ball-Box2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Box2d, Shape2d-Point, Shape2d-Ball,
-            Shape2d-Box2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
+            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
+            Box2d-Shape2d, Shape2d-Shape2d
         ]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
         vec2_tiny_shape_cast: Toiae @ Vec2, Config::TINY,
         [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
-    );
-    cast_test!(
-        #[ignore = "backlog/poly2d-robustness.md"]
-        vec2_tiny_poly2d: Toiae @ Vec2, Config::TINY,
-        [Point-Poly2d, Poly2d-Point, Poly2d-Poly2d]
     );
     cast_test!(
         vec2_huge: Toiae @ Vec2, Config::HUGE,
@@ -511,19 +503,15 @@ mod tttoi {
     cast_test!(
         vec2_tiny: TtToi @ Vec2, Config::TINY,
         [
-            Point-Point, Point-Ball, Point-Box2d, Ball-Point, Ball-Ball, Ball-Box2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Box2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
+            Poly2d-Poly2d
         ]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
         vec2_tiny_shape_cast: TtToi @ Vec2, Config::TINY,
         [Ball-Poly2d, Poly2d-Ball]
-    );
-    cast_test!(
-        #[ignore = "backlog/poly2d-robustness.md"]
-        vec2_tiny_poly2d: TtToi @ Vec2, Config::TINY,
-        [Point-Poly2d, Poly2d-Point, Poly2d-Poly2d]
     );
     cast_test!(
         vec2_huge: TtToi @ Vec2, Config::HUGE,
@@ -626,19 +614,15 @@ mod tttoiae {
     cast_test!(
         vec2_tiny: TtToiae @ Vec2, Config::TINY,
         [
-            Point-Point, Point-Ball, Point-Box2d, Ball-Point, Ball-Ball, Ball-Box2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Box2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
+            Poly2d-Poly2d
         ]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
         vec2_tiny_shape_cast: TtToiae @ Vec2, Config::TINY,
         [Ball-Poly2d, Poly2d-Ball]
-    );
-    cast_test!(
-        #[ignore = "backlog/poly2d-robustness.md"]
-        vec2_tiny_poly2d: TtToiae @ Vec2, Config::TINY,
-        [Point-Poly2d, Poly2d-Point, Poly2d-Poly2d]
     );
     cast_test!(
         vec2_huge: TtToiae @ Vec2, Config::HUGE,

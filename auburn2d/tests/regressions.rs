@@ -6,6 +6,7 @@
 
 use auburn2d::prelude::*;
 use auburn2d::transformation::Transformation2d;
+use std::sync::Arc;
 
 fn near(got: Option<f32>, want: f32) -> bool {
     got.is_some_and(|t| (t - want).abs() < 1e-3)
@@ -17,52 +18,6 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 
 fn square_poly(half: f32) -> Poly2d {
     Poly2d::from(Box2d::square(half))
-}
-
-// backlog/poly2d-robustness.md
-
-#[test]
-#[ignore = "backlog/poly2d-robustness.md"]
-fn point_at_regular_polygon_centre() {
-    let hexagon = Poly2d::regular(6, 1.0);
-    let z = Vec2::ZERO;
-    assert!(Point.at(&z).collides(&hexagon.at(&z)));
-    assert_eq!(Point.at(&z).toi(&hexagon.at(&z), Vec2::ZERO), Some(0.0));
-    assert_eq!(Point.at(&z).toi(&hexagon.at(&z), Vec2::X), Some(0.0));
-}
-
-#[test]
-#[ignore = "backlog/poly2d-robustness.md"]
-fn regular_polygons_are_counter_clockwise() {
-    let p = Poly2d::regular(6, 1.0).points;
-    let twice_area: f32 = (0..p.len())
-        .map(|i| p[i].perp_dot(p[(i + 1) % p.len()]))
-        .sum();
-    assert!(twice_area > 0.0, "{p:?}");
-}
-
-#[test]
-#[ignore = "backlog/poly2d-robustness.md"]
-fn small_polygon_excludes_nearby_point() {
-    // A square of half size 1e-3, and a point 4e-4 outside its right edge.
-    let square = square_poly(1e-3);
-    let z = Vec2::ZERO;
-    let p = Vec2::new(1.4e-3, 0.0);
-    assert_eq!(Point.at(&p).toi(&square.at(&z), Vec2::ZERO), None);
-}
-
-#[test]
-#[ignore = "backlog/poly2d-robustness.md"]
-fn poly2d_area() {
-    assert!((square_poly(1.0).area() - 4.0).abs() < 1e-6);
-}
-
-#[test]
-#[ignore = "backlog/poly2d-robustness.md"]
-fn empty_poly2d_does_not_panic() {
-    let empty = Poly2d::default();
-    let z = Vec2::ZERO;
-    let _ = Point.at(&z).collides(&empty.at(&z));
 }
 
 // backlog/generic-shape-cast.md
@@ -100,6 +55,129 @@ fn ball_poly_cast_hits_corner() {
 }
 
 // Fixed bugs.
+
+/// `Poly2d::regular` went clockwise, and the Point–Poly2d casts at rest checked for a
+/// counter-clockwise polygon, so a point at the centre of a hexagon wasn't in it. No `Poly2d`
+/// query depends on the winding now, and `regular` goes counter-clockwise.
+#[test]
+fn point_at_regular_polygon_centre() {
+    let hexagon = Poly2d::regular(6, 1.0);
+    let z = Vec2::ZERO;
+    assert!(Point.at(&z).collides(&hexagon.at(&z)));
+    assert_eq!(Point.at(&z).toi(&hexagon.at(&z), Vec2::ZERO), Some(0.0));
+    assert_eq!(Point.at(&z).toi(&hexagon.at(&z), Vec2::X), Some(0.0));
+}
+
+#[test]
+fn regular_polygons_are_counter_clockwise() {
+    let p = Poly2d::regular(6, 1.0).points;
+    let twice_area: f32 = (0..p.len())
+        .map(|i| p[i].perp_dot(p[(i + 1) % p.len()]))
+        .sum();
+    assert!(twice_area > 0.0, "{p:?}");
+}
+
+#[test]
+fn clockwise_polygons_cast() {
+    // The square [-1, 1]², clockwise, at (3, 0).
+    let corners = [(-1.0, -1.0), (-1.0, 1.0), (1.0, 1.0), (1.0, -1.0)];
+    let cw = Poly2d::new(Arc::new(corners.map(|(x, y)| Vec2::new(x, y)).to_vec()));
+    let (z, c) = (Vec2::ZERO, Vec2::new(3.0, 0.0));
+    assert_eq!(Point.at(&c).toi(&cw.at(&c), Vec2::ZERO), Some(0.0));
+    assert!(near(Point.at(&z).toi(&cw.at(&c), Vec2::X), 2.0));
+    let r = Box2d::square(1.0).at(&z).toi(&cw.at(&c), Vec2::X);
+    assert!(near(r, 1.0), "box {r:?}");
+    let r = cw.at(&z).toi(&square_poly(1.0).at(&c), Vec2::X);
+    assert!(near(r, 1.0), "poly {r:?}");
+    let t = Transform2d::from_translation(c);
+    let r = Point.at(&t).tttoi(&cw.at(&t), Vec2::ZERO);
+    assert_eq!(r, Some(f32::NEG_INFINITY), "Transform2d");
+}
+
+/// The Poly2d casts had absolute tolerances: a point 4e-4 outside a square of half size 1e-3
+/// was in it, a velocity below 1e-5 was at rest, and one within about a degree of an edge of
+/// a polygon of size 1e-4 ran along it. They have no tolerances now.
+#[test]
+fn small_polygon_excludes_nearby_point() {
+    // A square of half size 1e-3, and a point 4e-4 outside its right edge.
+    let square = square_poly(1e-3);
+    let z = Vec2::ZERO;
+    let p = Vec2::new(1.4e-3, 0.0);
+    assert_eq!(Point.at(&p).toi(&square.at(&z), Vec2::ZERO), None);
+}
+
+#[test]
+fn small_polygon_casts() {
+    let (z, square) = (Vec2::ZERO, square_poly(1e-4));
+    // 3e-4 to go at 5e-6.
+    let r = Point
+        .at(&z)
+        .toi(&square.at(&Vec2::new(4e-4, 0.0)), Vec2::new(5e-6, 0.0));
+    assert!(near(r, 60.0), "point {r:?}");
+    // 5e-6 apart along y and closing at 4e-7, so they meet when x allows: from 80 to 120.
+    let b = Vec2::new(1e-3, 2.05e-4);
+    let r = square.at(&z).toiae(&square.at(&b), Vec2::new(1e-5, 4e-7));
+    assert!(near_span(r, (80.0, 120.0)), "poly {r:?}");
+}
+
+/// `Poly2d::area` was `unimplemented!()`.
+#[test]
+fn poly2d_area() {
+    assert!((square_poly(1.0).area() - 4.0).abs() < 1e-6);
+    let hexagon = 1.5 * 3f32.sqrt();
+    assert!((Poly2d::regular(6, 1.0).area() - hexagon).abs() < 1e-5);
+    let mut far = (*square_poly(1.0).points).clone();
+    far.reverse();
+    let far = far.into_iter().map(|p| p + Vec2::new(1e4, -1e4)).collect();
+    assert!((Poly2d::new(Arc::new(far)).area() - 4.0).abs() < 1e-6);
+}
+
+/// An empty `Poly2d`, as from `Default`, panicked in `support`. It is a point at its origin
+/// now, like a polygon with one vertex there.
+#[test]
+fn empty_poly2d_is_a_point_at_its_origin() {
+    let empty = Poly2d::default();
+    let (z, c) = (Vec2::ZERO, Vec2::new(3.0, 0.0));
+    assert_eq!(empty.area(), 0.0);
+    assert!(!Point.at(&z).collides(&empty.at(&c)));
+    assert!(
+        Ball::new(1.0)
+            .at(&Vec2::new(2.5, 0.0))
+            .collides(&empty.at(&c))
+    );
+    assert!(near(Point.at(&z).toi(&empty.at(&c), Vec2::X), 3.0));
+    let r = Box2d::square(1.0).at(&z).toi(&empty.at(&c), Vec2::X);
+    assert!(near(r, 2.0), "box {r:?}");
+    let r = empty.at(&c).toi(&square_poly(1.0).at(&z), Vec2::NEG_X);
+    assert!(near(r, 2.0), "poly {r:?}");
+    let (tz, tc) = (Transform2d::IDENTITY, Transform2d::from_translation(c));
+    let r = Point.at(&tz).toi(&empty.at(&tc), Vec2::X);
+    assert!(near(r, 3.0), "Transform2d {r:?}");
+}
+
+/// `Poly2d::new` took any points. Debug builds check that they go once around a convex
+/// polygon now.
+#[test]
+#[cfg(debug_assertions)]
+fn poly2d_new_checks_convexity_in_debug_builds() {
+    let panics =
+        |points: Vec<Vec2>| std::panic::catch_unwind(|| Poly2d::new(Arc::new(points))).is_err();
+    let arrowhead = [(0.0, 2.0), (-1.0, 0.0), (0.0, 0.5), (1.0, 0.0)];
+    assert!(panics(arrowhead.map(|(x, y)| Vec2::new(x, y)).to_vec()));
+    let pentagon = Poly2d::regular(5, 1.0).points;
+    assert!(
+        panics([0, 2, 4, 1, 3].map(|i| pentagon[i]).to_vec()),
+        "star"
+    );
+    // Either way round, nearly flat, on a line, or fewer than three points.
+    let mut cw = (*square_poly(1.0).points).clone();
+    cw.reverse();
+    assert!(!panics(cw));
+    assert!(!panics((*Poly2d::regular(1000, 1e-3).points).clone()));
+    assert!(!panics(vec![Vec2::ZERO, Vec2::X, 2.0 * Vec2::X]));
+    assert!(!panics(vec![Vec2::ZERO, Vec2::X]));
+    assert!(!panics(vec![]));
+}
 
 /// Point–Ball and Ball–Ball `tttoi` and `tttoiae` divided by a zero velocity and gave NaN.
 /// At rest, overlapping shapes now overlap forever, as the `relation::cast` docs say.
