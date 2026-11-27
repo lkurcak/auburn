@@ -298,9 +298,9 @@ pub fn cast<A: Sample, B: Sample, T: Place>(
     out
 }
 
-/// The cast `kind` at zero velocity reports the overlap the shapes have now: never NaN, `Some`
-/// exactly when they overlap, an entry no later than 0 and an exit no earlier than 0, and an
-/// entry of exactly 0 for the bounded casts.
+/// The cast `kind` at zero velocity reports the overlap the shapes have now: `None` if they are
+/// apart, and if they overlap, an overlap that lasts forever: from 0 for the bounded casts and
+/// from minus infinity for the time-traveling ones, to infinity.
 pub fn cast_at_rest<A: Sample, B: Sample, T: Place>(
     cfg: &Config,
     n: usize,
@@ -321,19 +321,15 @@ pub fn cast_at_rest<A: Sample, B: Sample, T: Place>(
             continue;
         }
         out.cases += 1;
-        let overlap = depth > 0.0;
+        let entry = if kind.bounded() {
+            0.0
+        } else {
+            f32::NEG_INFINITY
+        };
+        let want = (depth > 0.0).then_some((entry, f32::INFINITY));
         let ok = match got {
-            Hit::Time(t) => match t {
-                Some(t) if t.is_nan() => false,
-                Some(t) => overlap && t <= 0.0 && (!kind.bounded() || t == 0.0),
-                None => !overlap,
-            },
-            Hit::Span(span) => match span {
-                Some((entry, exit)) => {
-                    overlap && entry <= 0.0 && exit >= 0.0 && (!kind.bounded() || entry == 0.0)
-                }
-                None => !overlap,
-            },
+            Hit::Time(t) => t == want.map(|(entry, _)| entry),
+            Hit::Span(span) => span == want,
         };
         if !ok {
             out.fail(format!(

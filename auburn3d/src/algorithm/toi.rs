@@ -1,6 +1,7 @@
 use super::gjk::gjk;
 /// Time of Impact (TOI) using Conservative Advancement algorithm.
 use crate::Vec3;
+use crate::relation::cast::is_at_rest;
 
 const MAX_ITERATIONS: usize = 32;
 const TOLERANCE: f32 = 1e-4;
@@ -11,7 +12,8 @@ where
     F1: Fn(Vec3) -> Vec3,
     F2: Fn(Vec3) -> Vec3,
 {
-    if vel == Vec3::ZERO {
+    // At rest, overlapping shapes overlap from now on
+    if is_at_rest(vel) {
         return gjk(support_a, support_b, 30).map(|_| 0.0);
     }
 
@@ -78,6 +80,9 @@ where
     F1: Fn(Vec3) -> Vec3 + Copy,
     F2: Fn(Vec3) -> Vec3 + Copy,
 {
+    if is_at_rest(vel) {
+        return gjk(support_a, support_b, 30).map(|_| (0.0, f32::INFINITY));
+    }
     let t_entry = conservative_advancement_toi(support_a, support_b, vel)?;
 
     let mut t_exit = t_entry;
@@ -110,8 +115,9 @@ where
     F1: Fn(Vec3) -> Vec3,
     F2: Fn(Vec3) -> Vec3,
 {
-    if vel == Vec3::ZERO {
-        return gjk(support_a, support_b, 30).map(|_| 0.0);
+    // At rest, overlapping shapes have always overlapped
+    if is_at_rest(vel) {
+        return gjk(support_a, support_b, 30).map(|_| f32::NEG_INFINITY);
     }
 
     let vel_length = vel.length();
@@ -153,6 +159,9 @@ where
     F1: Fn(Vec3) -> Vec3 + Copy,
     F2: Fn(Vec3) -> Vec3 + Copy,
 {
+    if is_at_rest(vel) {
+        return gjk(support_a, support_b, 30).map(|_| (f32::NEG_INFINITY, f32::INFINITY));
+    }
     let t_entry = conservative_advancement_toi_unbounded(support_a, support_b, vel)?;
 
     let mut t_high = t_entry + 1.0;

@@ -13,3 +13,8 @@ In `algorithm/toi.rs`, 2D and 3D. Use GJK ray cast against the Minkowski differe
 - Settle the time range everywhere: toi ∈ [0,∞), as the docs already claim, and
   tttoi ∈ (−∞,∞).
 - Probably split into a 2D PR and a 3D PR.
+- Keep the conventions documented in `relation/cast.rs`. The at-rest answers already hold,
+  through an early return in each conservative-advancement function, and the randomized
+  at-rest checks require them for every pair.
+- `Transform3d` scale is uniform, so its Point and Ball pairs could use the exact `Vec3` casts
+  on world-space balls, as 2D does since #25, instead of the generic cast.

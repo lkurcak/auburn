@@ -2,61 +2,42 @@ use crate::Vec3;
 use crate::collider::Collider;
 use crate::relation::cast::{
     TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
+    direction_and_speed, from_span, is_at_rest,
 };
 use crate::shape::point::Point;
 
-impl TimeOfImpact<Collider<'_, Point, Vec3>> for Collider<'_, Point, Vec3> {
-    fn toi(&self, other: &Collider<'_, Point, Vec3>, vel: Vec3) -> Option<f32> {
-        // |self.isometry + vel*t - other.isometry|^2 = 0
-        let a = self.isometry - other.isometry;
-        let b = vel;
+/// When a point at `a` coincides with one at `b` while it moves at `vel`, over all of time: the
+/// moment it passes through, `None` if it misses by more than rounding, or forever if it is at
+/// rest on the other point.
+fn point_point_overlap(a: Vec3, b: Vec3, vel: Vec3) -> Option<(f32, f32)> {
+    let p = a - b;
+    if is_at_rest(vel) {
+        return (p == Vec3::ZERO).then_some((f32::NEG_INFINITY, f32::INFINITY));
+    }
+    let (dir, speed) = direction_and_speed(vel);
+    let along = p.dot(dir);
+    let miss = p - dir * along;
+    // Positions are only good to a unit in their last place, so a path straight through can
+    // seem to miss by a few of them.
+    (miss.length() <= 4.0 * f32::EPSILON * (a.length() + b.length())).then(|| {
+        let t = -along / speed;
+        (t, t)
+    })
+}
 
-        let a_coeff = b.dot(b);
-        let b_coeff = 2.0 * a.dot(b);
-        let c_coeff = a.dot(a);
-
-        if a_coeff.abs() < 1e-10 {
-            if c_coeff < 1e-10 {
-                return Some(0.0);
+macro_rules! point_point_impls {
+    ($($Trait:ident::$method:ident -> $Out:ty;)*) => {$(
+        impl $Trait<Collider<'_, Point, Vec3>> for Collider<'_, Point, Vec3> {
+            fn $method(&self, other: &Collider<'_, Point, Vec3>, vel: Vec3) -> Option<$Out> {
+                from_span::$method(point_point_overlap(*self.isometry, *other.isometry, vel))
             }
-            return None;
         }
-
-        let discriminant = b_coeff * b_coeff - 4.0 * a_coeff * c_coeff;
-        if discriminant < 0.0 {
-            return None;
-        }
-
-        let sqrt_disc = discriminant.sqrt();
-        let t1 = (-b_coeff - sqrt_disc) / (2.0 * a_coeff);
-        let t2 = (-b_coeff + sqrt_disc) / (2.0 * a_coeff);
-
-        let t_min = t1.min(t2);
-        if t_min >= 0.0 {
-            Some(t_min)
-        } else if t1.max(t2) >= 0.0 {
-            Some(0.0)
-        } else {
-            None
-        }
-    }
+    )*};
 }
 
-impl TimeOfImpactAndExit<Collider<'_, Point, Vec3>> for Collider<'_, Point, Vec3> {
-    fn toiae(&self, other: &Collider<'_, Point, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        // Point-point: exit time is infinity (or the same as entry if already colliding)
-        self.toi(other, vel).map(|t| (t, f32::INFINITY))
-    }
-}
-
-impl TimeTravelingTimeOfImpact<Collider<'_, Point, Vec3>> for Collider<'_, Point, Vec3> {
-    fn tttoi(&self, other: &Collider<'_, Point, Vec3>, vel: Vec3) -> Option<f32> {
-        self.toi(other, vel)
-    }
-}
-
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Point, Vec3>> for Collider<'_, Point, Vec3> {
-    fn tttoiae(&self, other: &Collider<'_, Point, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        self.toiae(other, vel)
-    }
+point_point_impls! {
+    TimeOfImpact::toi -> f32;
+    TimeOfImpactAndExit::toiae -> (f32, f32);
+    TimeTravelingTimeOfImpact::tttoi -> f32;
+    TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32);
 }

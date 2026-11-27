@@ -19,25 +19,6 @@ fn square_poly(half: f32) -> Poly2d {
     Poly2d::from(Box2d::square(half))
 }
 
-// backlog/cast-edge-cases.md
-
-#[test]
-#[ignore = "backlog/cast-edge-cases.md"]
-fn time_traveling_casts_at_rest_are_not_nan() {
-    let (p, inside, far) = (Vec2::ZERO, Vec2::new(0.5, 0.0), Vec2::new(5.0, 0.0));
-    let ball = Ball::new(1.0);
-    let r = Point.at(&p).tttoi(&ball.at(&inside), Vec2::ZERO);
-    assert!(r.is_some_and(|t| t <= 0.0), "overlapping: {r:?}");
-    assert_eq!(Point.at(&p).tttoi(&ball.at(&far), Vec2::ZERO), None);
-    assert_eq!(ball.at(&p).tttoiae(&ball.at(&far), Vec2::ZERO), None);
-    let (t1, t2) = (
-        Transform2d::from_translation(p),
-        Transform2d::from_translation(inside),
-    );
-    let r = ball.at(&t1).tttoi(&ball.at(&t2), Vec2::ZERO);
-    assert!(r.is_some_and(|t| t <= 0.0), "Transform2d: {r:?}");
-}
-
 // backlog/poly2d-robustness.md
 
 #[test]
@@ -119,6 +100,56 @@ fn ball_poly_cast_hits_corner() {
 }
 
 // Fixed bugs.
+
+/// Point–Ball and Ball–Ball `tttoi` and `tttoiae` divided by a zero velocity and gave NaN.
+/// At rest, overlapping shapes now overlap forever, as the `relation::cast` docs say.
+#[test]
+fn time_traveling_casts_at_rest_are_not_nan() {
+    let (p, inside, far) = (Vec2::ZERO, Vec2::new(0.5, 0.0), Vec2::new(5.0, 0.0));
+    let ball = Ball::new(1.0);
+    let forever = Some((f32::NEG_INFINITY, f32::INFINITY));
+    let r = Point.at(&p).tttoi(&ball.at(&inside), Vec2::ZERO);
+    assert_eq!(r, Some(f32::NEG_INFINITY), "overlapping");
+    assert_eq!(
+        Point.at(&p).tttoiae(&ball.at(&inside), -Vec2::ZERO),
+        forever
+    );
+    assert_eq!(
+        ball.at(&p).toiae(&ball.at(&inside), Vec2::ZERO),
+        Some((0.0, f32::INFINITY))
+    );
+    assert_eq!(Point.at(&p).tttoi(&ball.at(&far), Vec2::ZERO), None);
+    assert_eq!(ball.at(&p).tttoiae(&ball.at(&far), Vec2::ZERO), None);
+    let (t1, t2) = (
+        Transform2d::from_translation(p),
+        Transform2d::from_translation(inside),
+    );
+    let r = ball.at(&t1).tttoi(&ball.at(&t2), Vec2::ZERO);
+    assert_eq!(r, Some(f32::NEG_INFINITY), "Transform2d");
+}
+
+/// Point–Point casts were always `None`. Points touch where they coincide, as with `collides`.
+#[test]
+fn point_point_casts() {
+    let (a, b) = (Vec2::new(1.0, 2.0), Vec2::new(4.0, 6.0));
+    // Straight at b, which is 5 away along (0.6, 0.8).
+    let vel = Vec2::new(0.6, 0.8);
+    assert!(near(Point.at(&a).toi(&Point.at(&b), vel), 5.0));
+    assert!(near_span(
+        Point.at(&a).toiae(&Point.at(&b), vel),
+        (5.0, 5.0)
+    ));
+    assert!(near(Point.at(&a).tttoi(&Point.at(&b), -vel), -5.0));
+    assert_eq!(Point.at(&a).toi(&Point.at(&b), -vel), None, "b is behind");
+    assert_eq!(Point.at(&a).tttoi(&Point.at(&b), Vec2::X), None, "missing");
+    assert_eq!(Point.at(&a).toi(&Point.at(&b), Vec2::ZERO), None);
+    assert_eq!(Point.at(&a).toi(&Point.at(&a), Vec2::ZERO), Some(0.0));
+    let (ta, tb) = (
+        Transform2d::from_translation(a),
+        Transform2d::from_translation(b),
+    );
+    assert!(near(Point.at(&ta).toi(&Point.at(&tb), vel), 5.0));
+}
 
 /// `Transform2d` ball casts scaled radii twice, by the wrong collider's scale, or by a
 /// negative scale, and `toiae` gave no exit when starting inside. They now cast the

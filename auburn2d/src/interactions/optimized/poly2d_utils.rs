@@ -44,11 +44,7 @@ fn ray_polygon_times(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Vec<f32> {
 /// Returns the earliest intersection time (can be negative).
 pub fn point_poly_tttoi(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<f32> {
     if vel.length_squared() < 1e-10 {
-        return if point_in_convex_polygon(origin, vertices) {
-            Some(0.0)
-        } else {
-            None
-        };
+        return point_in_convex_polygon(origin, vertices).then_some(f32::NEG_INFINITY);
     }
     let times = ray_polygon_times(origin, vel, vertices);
     if times.is_empty() {
@@ -60,11 +56,8 @@ pub fn point_poly_tttoi(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<f3
 /// Unbounded TOI and exit for a moving point vs a convex polygon.
 pub fn point_poly_tttoiae(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<(f32, f32)> {
     if vel.length_squared() < 1e-10 {
-        return if point_in_convex_polygon(origin, vertices) {
-            Some((0.0, 0.0))
-        } else {
-            None
-        };
+        return point_in_convex_polygon(origin, vertices)
+            .then_some((f32::NEG_INFINITY, f32::INFINITY));
     }
     let times = ray_polygon_times(origin, vel, vertices);
     if times.is_empty() {
@@ -78,11 +71,7 @@ pub fn point_poly_tttoiae(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<
 /// Bounded TOI for a moving point vs a convex polygon.
 pub fn point_poly_toi(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<f32> {
     if vel.length_squared() < 1e-10 {
-        return if point_in_convex_polygon(origin, vertices) {
-            Some(0.0)
-        } else {
-            None
-        };
+        return point_in_convex_polygon(origin, vertices).then_some(0.0);
     }
     let times = ray_polygon_times(origin, vel, vertices);
     if times.is_empty() {
@@ -102,11 +91,7 @@ pub fn point_poly_toi(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<f32>
 /// Bounded TOI and exit for a moving point vs a convex polygon.
 pub fn point_poly_toiae(origin: Vec2, vel: Vec2, vertices: &[Vec2]) -> Option<(f32, f32)> {
     if vel.length_squared() < 1e-10 {
-        return if point_in_convex_polygon(origin, vertices) {
-            Some((0.0, 0.0))
-        } else {
-            None
-        };
+        return point_in_convex_polygon(origin, vertices).then_some((0.0, f32::INFINITY));
     }
     let times = ray_polygon_times(origin, vel, vertices);
     if times.is_empty() {

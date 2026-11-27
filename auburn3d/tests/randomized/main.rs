@@ -244,12 +244,10 @@ mod toi {
     );
     cast_test!(
         vec3_at_rest: Toi at rest @ Vec3, Config::BASE,
-        [Point-Point, Point-Box3d, Ball-Box3d, Box3d-Point, Box3d-Ball, Box3d-Box3d]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_at_rest_edge_cases: Toi at rest @ Vec3, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [
+            Point-Point, Point-Ball, Point-Box3d, Ball-Point, Ball-Ball, Ball-Box3d, Box3d-Point,
+            Box3d-Ball, Box3d-Box3d
+        ]
     );
     cast_test!(
         transform3d_at_rest: Toi at rest @ Transform3d, Config::RIGID,
@@ -339,12 +337,10 @@ mod toiae {
     );
     cast_test!(
         vec3_at_rest: Toiae at rest @ Vec3, Config::BASE,
-        [Point-Point, Point-Box3d, Ball-Box3d, Box3d-Point, Box3d-Ball, Box3d-Box3d]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_at_rest_edge_cases: Toiae at rest @ Vec3, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [
+            Point-Point, Point-Ball, Point-Box3d, Ball-Point, Ball-Ball, Ball-Box3d, Box3d-Point,
+            Box3d-Ball, Box3d-Box3d
+        ]
     );
     cast_test!(
         transform3d_at_rest: Toiae at rest @ Transform3d, Config::RIGID,
@@ -359,12 +355,7 @@ mod tttoi {
     use super::*;
     cast_test!(
         vec3: TtToi @ Vec3, Config::BASE,
-        [Point-Point]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_edge_cases: TtToi @ Vec3, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [Point-Point, Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
@@ -373,12 +364,7 @@ mod tttoi {
     );
     cast_test!(
         vec3_tiny: TtToi @ Vec3, Config::TINY,
-        [Point-Point]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_tiny_edge_cases: TtToi @ Vec3, Config::TINY,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [Point-Point, Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
@@ -387,12 +373,7 @@ mod tttoi {
     );
     cast_test!(
         vec3_huge: TtToi @ Vec3, Config::HUGE,
-        [Point-Point]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_huge_edge_cases: TtToi @ Vec3, Config::HUGE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [Point-Point, Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
@@ -449,12 +430,10 @@ mod tttoi {
     );
     cast_test!(
         vec3_at_rest: TtToi at rest @ Vec3, Config::BASE,
-        [Point-Point, Point-Box3d, Ball-Box3d, Box3d-Point, Box3d-Ball, Box3d-Box3d]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_at_rest_edge_cases: TtToi at rest @ Vec3, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [
+            Point-Point, Point-Ball, Point-Box3d, Ball-Point, Ball-Ball, Ball-Box3d, Box3d-Point,
+            Box3d-Ball, Box3d-Box3d
+        ]
     );
     cast_test!(
         transform3d_at_rest: TtToi at rest @ Transform3d, Config::RIGID,
@@ -469,12 +448,7 @@ mod tttoiae {
     use super::*;
     cast_test!(
         vec3: TtToiae @ Vec3, Config::BASE,
-        [Point-Point]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_edge_cases: TtToiae @ Vec3, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [Point-Point, Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
@@ -483,12 +457,7 @@ mod tttoiae {
     );
     cast_test!(
         vec3_tiny: TtToiae @ Vec3, Config::TINY,
-        [Point-Point]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_tiny_edge_cases: TtToiae @ Vec3, Config::TINY,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [Point-Point, Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
@@ -497,12 +466,7 @@ mod tttoiae {
     );
     cast_test!(
         vec3_huge: TtToiae @ Vec3, Config::HUGE,
-        [Point-Point]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_huge_edge_cases: TtToiae @ Vec3, Config::HUGE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [Point-Point, Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
@@ -559,12 +523,10 @@ mod tttoiae {
     );
     cast_test!(
         vec3_at_rest: TtToiae at rest @ Vec3, Config::BASE,
-        [Point-Point, Point-Box3d, Ball-Box3d, Box3d-Point, Box3d-Ball, Box3d-Box3d]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec3_at_rest_edge_cases: TtToiae at rest @ Vec3, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
+        [
+            Point-Point, Point-Ball, Point-Box3d, Ball-Point, Ball-Ball, Ball-Box3d, Box3d-Point,
+            Box3d-Ball, Box3d-Box3d
+        ]
     );
     cast_test!(
         transform3d_at_rest: TtToiae at rest @ Transform3d, Config::RIGID,
