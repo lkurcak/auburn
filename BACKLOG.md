@@ -3,16 +3,16 @@
 ## Now
 
 1. [`Collider::support` loses precision far from the origin](backlog/support-direction.md)
-2. [3D EPA returns zero or wrong vectors](backlog/epa-3d.md)
-3. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
-4. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
-5. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
-6. [`Poly2d` robustness: winding, epsilons, `area`, empty polygons](backlog/poly2d-robustness.md)
-7. Remove `From<ScaleTranslate2d> for bevy Isometry2d` (`auburn2d/src/transformation/scale_translate2d.rs`, bevy feature): it is two `todo!()`s. Deleting it is technically breaking, but it can only panic.
-8. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
-9. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
-10. [Cast coverage through the generic cast](backlog/cast-coverage.md)
-11. Release 0.4.0. Ask the user first: releases are tag-triggered through forge and publish to crates.io.
+1. [3D EPA returns zero or wrong vectors](backlog/epa-3d.md)
+1. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
+1. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
+1. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
+1. [`Poly2d` robustness: winding, epsilons, `area`, empty polygons](backlog/poly2d-robustness.md)
+1. Remove `From<ScaleTranslate2d> for bevy Isometry2d` (bevy feature): its body is `todo!()`, so it can only panic. Removing it is technically breaking.
+1. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
+1. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
+1. [Cast coverage through the generic cast](backlog/cast-coverage.md)
+1. Owner: say whether to release 0.4.0
 
 ## Later
 
@@ -23,7 +23,7 @@
 - Cleanup: remove `derive_type::Wrapper` (deprecated since 0.1.0), the commented-out code, and duplicated iteration constants.
 - Benchmarks (criterion) against parry2d/3d, to back the "fast" claim.
 - [Performance](backlog/performance.md), after the benchmarks.
-- Fix the root README's CI badge: it points at `rust.yml`, which doesn't exist (the workflow is `ci.yml`), so the image 404s and only its alt text "CI" shows, as a bare link.
+- Fix the root README's CI badge: it points at `rust.yml`, but the workflow is `ci.yml`, so the image 404s.
 - [Docs: READMEs, missing docs, positioning](backlog/docs.md)
 - `move_and_slide` helper for kinematic characters. Needs the cast result.
 - Small bevy plugin: collider components and a query `SystemParam`. The bevy example currently checks every pair.
@@ -35,8 +35,6 @@
 
 ## Done
 
-- GJK and EPA tolerances scale with the shapes (#18): no absolute epsilons, search directions
-  as long as the shapes, EPA stops relative to the polytope's size, and coincident points touch
-  in 2D as in 3D.
-- Reversed 3D `toiae`/`tttoiae` no longer swap entry and exit (#17).
-- Land the randomized suite as permanent tests (#16): `tests/randomized` and `tests/regressions.rs` in both crates, with failing checks `#[ignore]`d by backlog item.
+- GJK and EPA tolerances scale with the shapes (#18)
+- Reversed 3D `toiae`/`tttoiae` keep entry before exit (#17)
+- Randomized suites against an exact ground truth, failing checks ignored by backlog item (#16)
