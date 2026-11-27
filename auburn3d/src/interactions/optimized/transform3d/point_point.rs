@@ -1,48 +1,30 @@
+//! A point under a [`Transform3d`] is a point at the transform's position, so these casts use
+//! the [`Vec3`] ones.
+
 use crate::Vec3;
-use crate::algorithm::{
-    conservative_advancement_toi, conservative_advancement_toi_unbounded,
-    conservative_advancement_toiae, conservative_advancement_toiae_unbounded,
-};
 use crate::collider::Collider;
-use crate::property::support::Support;
+use crate::interactions::optimized::vec3::point_point::point_point_overlap;
 use crate::relation::cast::{
     TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
+    from_span,
 };
 use crate::shape::point::Point;
 use crate::transformation::Transform3d;
 
-impl TimeOfImpact<Collider<'_, Point, Transform3d>> for Collider<'_, Point, Transform3d> {
-    fn toi(&self, other: &Collider<'_, Point, Transform3d>, vel: Vec3) -> Option<f32> {
-        conservative_advancement_toi(|dir| self.support(dir), |dir| other.support(dir), vel)
-    }
+macro_rules! point_point_impls {
+    ($($Trait:ident::$method:ident -> $Out:ty;)*) => {$(
+        impl $Trait<Collider<'_, Point, Transform3d>> for Collider<'_, Point, Transform3d> {
+            fn $method(&self, other: &Collider<'_, Point, Transform3d>, vel: Vec3) -> Option<$Out> {
+                let (a, b) = (self.isometry.pos, other.isometry.pos);
+                from_span::$method(point_point_overlap(a, b, vel))
+            }
+        }
+    )*};
 }
 
-impl TimeOfImpactAndExit<Collider<'_, Point, Transform3d>> for Collider<'_, Point, Transform3d> {
-    fn toiae(&self, other: &Collider<'_, Point, Transform3d>, vel: Vec3) -> Option<(f32, f32)> {
-        conservative_advancement_toiae(|dir| self.support(dir), |dir| other.support(dir), vel)
-    }
-}
-
-impl TimeTravelingTimeOfImpact<Collider<'_, Point, Transform3d>>
-    for Collider<'_, Point, Transform3d>
-{
-    fn tttoi(&self, other: &Collider<'_, Point, Transform3d>, vel: Vec3) -> Option<f32> {
-        conservative_advancement_toi_unbounded(
-            |dir| self.support(dir),
-            |dir| other.support(dir),
-            vel,
-        )
-    }
-}
-
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Point, Transform3d>>
-    for Collider<'_, Point, Transform3d>
-{
-    fn tttoiae(&self, other: &Collider<'_, Point, Transform3d>, vel: Vec3) -> Option<(f32, f32)> {
-        conservative_advancement_toiae_unbounded(
-            |dir| self.support(dir),
-            |dir| other.support(dir),
-            vel,
-        )
-    }
+point_point_impls! {
+    TimeOfImpact::toi -> f32;
+    TimeOfImpactAndExit::toiae -> (f32, f32);
+    TimeTravelingTimeOfImpact::tttoi -> f32;
+    TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32);
 }

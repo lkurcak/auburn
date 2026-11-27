@@ -9,7 +9,7 @@ use crate::shape::point::Point;
 /// When a point at `a` coincides with one at `b` while it moves at `vel`, over all of time: the
 /// moment it passes through, `None` if it misses by more than rounding, or forever if it is at
 /// rest on the other point.
-fn point_point_overlap(a: Vec3, b: Vec3, vel: Vec3) -> Option<(f32, f32)> {
+pub(crate) fn point_point_overlap(a: Vec3, b: Vec3, vel: Vec3) -> Option<(f32, f32)> {
     let p = a - b;
     if is_at_rest(vel) {
         return (p == Vec3::ZERO).then_some((f32::NEG_INFINITY, f32::INFINITY));

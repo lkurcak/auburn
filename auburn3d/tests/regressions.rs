@@ -16,10 +16,12 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 
 const X5: Vec3 = Vec3::new(5.0, 0.0, 0.0);
 
-// backlog/generic-shape-cast.md
+// Fixed bugs.
 
+/// 3D casts involving boxes used conservative advancement, which stopped at t = 1, stalled once
+/// the shapes' projections along the motion overlapped, stepped exit times by 0.01 and never
+/// went below 0. They are a GJK ray cast now.
 #[test]
-#[ignore = "backlog/generic-shape-cast.md"]
 fn box_casts_past_t_one() {
     let z = Vec3::ZERO;
     let cube = Box3d::cube(1.0);
@@ -32,10 +34,14 @@ fn box_casts_past_t_one() {
         Vec3::new(2.0, 0.0, 0.0),
     );
     assert!(near_span(r, (0.5, 2.5)), "toiae {r:?}");
+    let r = cube.at(&z).tttoiae(
+        &cube.at(&Vec3::new(1.0, 0.0, 0.0)),
+        Vec3::new(2.0, 0.0, 0.0),
+    );
+    assert!(near_span(r, (-0.5, 1.5)), "tttoiae {r:?}");
 }
 
 #[test]
-#[ignore = "backlog/generic-shape-cast.md"]
 fn box_cast_does_not_stall() {
     let (a, b) = (
         Vec3::new(0.734_034_06, -1.500_807_9, -0.983_083_25),
@@ -49,15 +55,12 @@ fn box_cast_does_not_stall() {
 }
 
 #[test]
-#[ignore = "backlog/generic-shape-cast.md"]
 fn box_ball_toiae() {
     let r = Box3d::cube(1.0)
         .at(&Vec3::ZERO)
         .toiae(&Ball::new(1.0).at(&X5), X5);
     assert!(near_span(r, (0.6, 1.4)), "{r:?}");
 }
-
-// Fixed bugs.
 
 /// `tttoi` and `tttoiae` for balls and points called `toi` and `toiae`, so never went below 0.
 #[test]

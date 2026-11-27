@@ -119,7 +119,6 @@ fn ball_box_penetrates() {
 }
 
 #[test]
-#[ignore = "backlog/generic-shape-cast.md"]
 fn ball_box_toiae() {
     let (ball, cube) = (Ball::new(1.0), Box3d::cube(2.0));
     let (a, b) = (ball.at(&A), cube.at(&B));
@@ -148,7 +147,6 @@ fn box_box_penetrates() {
 }
 
 #[test]
-#[ignore = "backlog/generic-shape-cast.md"]
 fn box_box_toiae() {
     let (small, large) = (Box3d::cube(1.0), Box3d::cube(2.0));
     assert_span(small.at(&A).toiae(&large.at(&B), Vec3::X), Some((0.0, 5.0)));

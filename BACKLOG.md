@@ -2,7 +2,6 @@
 
 ## Now
 
-1. [One generic shape cast in 3D, replacing conservative advancement](backlog/generic-shape-cast.md)
 1. [Cast coverage through the generic cast](backlog/cast-coverage.md)
 1. Release 0.4.0.
 1. [Playground: try the 2D queries by hand, on the desktop and in the browser](backlog/playground.md)
@@ -11,7 +10,7 @@
 
 ## Later
 
-- Cast result with time, hit normal and contact point. `CastResult` is commented out in `relation/cast.rs`; sliding along walls needs the normal. Needs the generic shape cast.
+- Cast result with time, hit normal and contact point. `CastResult` is commented out in `relation/cast.rs`; sliding along walls needs the normal.
 - Capsule shape in 2D and 3D.
 - Segment shape and a ray query API.
 - More shapes in the enums: `Poly2d` in `Shape2d`; a 3D convex hull/polyhedron shape and a `Shape3d` enum.
@@ -24,7 +23,7 @@
 - Small bevy plugin: collider components and a query `SystemParam`. The bevy example currently checks every pair.
 - Simple broadphase: a uniform grid or sort-and-sweep.
 - Playground: step through GJK and EPA, drawing the simplex and the polytope at each
-  iteration. Needs hooks in the algorithms, so after the generic shape cast.
+  iteration. Needs hooks in the algorithms.
 - Playground in 3D.
 - Save a playground scene as a PNG (egui_kittest snapshots), so an agent can look at a
   failing randomized case.
@@ -36,9 +35,13 @@
   convert only when the scale is 1.
 - With `--all-features`, cargo warns that the optional `glam` dependency is unused in both crates,
   because bevy's `Vec3` wins (cargo's `unused_dependencies` lint).
+- Bring 3D's ray cast fixes to 2D's `shape_cast`: balls as a centre and a radius
+  (`rounded_shape_cast`), and a hit test that allows for the angle the ray meets the set at.
+  2D passes at 200× without them, but 3D got about 1 case in 60 000 wrong.
 
 ## Done
 
+- 3D casts without an exact formula, every pair with a `Box3d`, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`, with a ball as its centre and radius: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; `Transform3d` Point and Ball pairs use the exact `Vec3` casts; conservative advancement is gone (#31)
 - 2D casts without an exact formula, Ball–Poly2d so far, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; conservative advancement is gone from 2D (#30)
 - 2D bevy `Transform` uses its own x and y scale on the plane z = 0, so uneven scales and mirrors work and z no longer leaks in; `inverse` is the matrix inverse in 2D and 3D, and converting to `Transform2d`/`Transform3d` keeps an even scale exactly (#29)
 - `From<ScaleTranslate2d> for bevy Isometry2d` is gone: its body was `todo!()`, so it could only panic (#28)
@@ -48,4 +51,3 @@
 - 2D EPA returns the shortest support distance it finds, so deep, near-concentric balls get their depth and direction (#24)
 - 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#23)
 - 3D EPA orients faces by their winding and keeps its polytope closed, so balls get their depth (#21)
-- `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)

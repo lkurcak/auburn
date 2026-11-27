@@ -1,68 +1,22 @@
+//! Balls against boxes have no exact cast yet, so they go through the generic one, with the
+//! ball as its centre rounded by its radius.
+
 use crate::Vec3;
-use crate::algorithm::{
-    conservative_advancement_toi, conservative_advancement_toi_unbounded,
-    conservative_advancement_toiae, conservative_advancement_toiae_unbounded,
-};
+use crate::algorithm::toi::rounded_shape_cast;
 use crate::collider::Collider;
+use crate::interactions::optimized::casts_from_span;
 use crate::property::support::Support;
-use crate::relation::cast::{
-    TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
-};
 use crate::shape::{ball::Ball, box3d::Box3d};
 
-impl TimeOfImpact<Collider<'_, Box3d, Vec3>> for Collider<'_, Ball, Vec3> {
-    fn toi(&self, other: &Collider<'_, Box3d, Vec3>, vel: Vec3) -> Option<f32> {
-        conservative_advancement_toi(|dir| self.support(dir), |dir| other.support(dir), vel)
-    }
+/// When `ball`, moving at `vel`, overlaps `cube`, over all of time.
+fn ball_box(
+    ball: &Collider<'_, Ball, Vec3>,
+    cube: &Collider<'_, Box3d, Vec3>,
+    vel: Vec3,
+) -> Option<(f32, f32)> {
+    let centre = *ball.isometry;
+    let radius = ball.shape.radius;
+    rounded_shape_cast(|_| centre, |dir| cube.support(dir), radius, vel)
 }
 
-impl TimeOfImpactAndExit<Collider<'_, Box3d, Vec3>> for Collider<'_, Ball, Vec3> {
-    fn toiae(&self, other: &Collider<'_, Box3d, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        conservative_advancement_toiae(|dir| self.support(dir), |dir| other.support(dir), vel)
-    }
-}
-
-impl TimeTravelingTimeOfImpact<Collider<'_, Box3d, Vec3>> for Collider<'_, Ball, Vec3> {
-    fn tttoi(&self, other: &Collider<'_, Box3d, Vec3>, vel: Vec3) -> Option<f32> {
-        conservative_advancement_toi_unbounded(
-            |dir| self.support(dir),
-            |dir| other.support(dir),
-            vel,
-        )
-    }
-}
-
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Box3d, Vec3>> for Collider<'_, Ball, Vec3> {
-    fn tttoiae(&self, other: &Collider<'_, Box3d, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        conservative_advancement_toiae_unbounded(
-            |dir| self.support(dir),
-            |dir| other.support(dir),
-            vel,
-        )
-    }
-}
-
-// Reverse
-impl TimeOfImpact<Collider<'_, Ball, Vec3>> for Collider<'_, Box3d, Vec3> {
-    fn toi(&self, other: &Collider<'_, Ball, Vec3>, vel: Vec3) -> Option<f32> {
-        other.toi(self, -vel)
-    }
-}
-
-impl TimeOfImpactAndExit<Collider<'_, Ball, Vec3>> for Collider<'_, Box3d, Vec3> {
-    fn toiae(&self, other: &Collider<'_, Ball, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        other.toiae(self, -vel)
-    }
-}
-
-impl TimeTravelingTimeOfImpact<Collider<'_, Ball, Vec3>> for Collider<'_, Box3d, Vec3> {
-    fn tttoi(&self, other: &Collider<'_, Ball, Vec3>, vel: Vec3) -> Option<f32> {
-        other.tttoi(self, -vel)
-    }
-}
-
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Ball, Vec3>> for Collider<'_, Box3d, Vec3> {
-    fn tttoiae(&self, other: &Collider<'_, Ball, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        other.tttoiae(self, -vel)
-    }
-}
+casts_from_span!(Ball, Box3d, Vec3, ball_box);
