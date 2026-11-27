@@ -269,99 +269,64 @@ mod toi {
         vec2: Toi @ Vec2, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_shape_cast: Toi @ Vec2, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         vec2_tiny: Toi @ Vec2, Config::TINY,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_tiny_shape_cast: Toi @ Vec2, Config::TINY,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         vec2_huge: Toi @ Vec2, Config::HUGE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_huge_shape_cast: Toi @ Vec2, Config::HUGE,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d_axis_aligned: Toi @ Transform2d, Config::AXIS_ALIGNED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_axis_aligned_shape_cast: Toi @ Transform2d, Config::AXIS_ALIGNED,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d_rigid: Toi @ Transform2d, Config::RIGID,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_rigid_shape_cast: Toi @ Transform2d, Config::RIGID,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d: Toi @ Transform2d, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_shape_cast: Toi @ Transform2d, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d_mirrored: Toi @ Transform2d, Config::MIRRORED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_mirrored_shape_cast: Toi @ Transform2d, Config::MIRRORED,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         vec2_at_rest: Toi at rest @ Vec2, Config::BASE,
@@ -389,99 +354,64 @@ mod toiae {
         vec2: Toiae @ Vec2, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_shape_cast: Toiae @ Vec2, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         vec2_tiny: Toiae @ Vec2, Config::TINY,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_tiny_shape_cast: Toiae @ Vec2, Config::TINY,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         vec2_huge: Toiae @ Vec2, Config::HUGE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_huge_shape_cast: Toiae @ Vec2, Config::HUGE,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d_axis_aligned: Toiae @ Transform2d, Config::AXIS_ALIGNED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_axis_aligned_shape_cast: Toiae @ Transform2d, Config::AXIS_ALIGNED,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d_rigid: Toiae @ Transform2d, Config::RIGID,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_rigid_shape_cast: Toiae @ Transform2d, Config::RIGID,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d: Toiae @ Transform2d, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_shape_cast: Toiae @ Transform2d, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         transform2d_mirrored: Toiae @ Transform2d, Config::MIRRORED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d, Point-Shape2d, Ball-Shape2d,
-            Box2d-Shape2d, Shape2d-Shape2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_mirrored_shape_cast: Toiae @ Transform2d, Config::MIRRORED,
-        [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
     );
     cast_test!(
         vec2_at_rest: Toiae at rest @ Vec2, Config::BASE,
@@ -509,92 +439,57 @@ mod tttoi {
         vec2: TtToi @ Vec2, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_shape_cast: TtToi @ Vec2, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         vec2_tiny: TtToi @ Vec2, Config::TINY,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_tiny_shape_cast: TtToi @ Vec2, Config::TINY,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         vec2_huge: TtToi @ Vec2, Config::HUGE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_huge_shape_cast: TtToi @ Vec2, Config::HUGE,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d_axis_aligned: TtToi @ Transform2d, Config::AXIS_ALIGNED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_axis_aligned_shape_cast: TtToi @ Transform2d, Config::AXIS_ALIGNED,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d_rigid: TtToi @ Transform2d, Config::RIGID,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_rigid_shape_cast: TtToi @ Transform2d, Config::RIGID,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d: TtToi @ Transform2d, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_shape_cast: TtToi @ Transform2d, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d_mirrored: TtToi @ Transform2d, Config::MIRRORED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_mirrored_shape_cast: TtToi @ Transform2d, Config::MIRRORED,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         vec2_at_rest: TtToi at rest @ Vec2, Config::BASE,
@@ -620,92 +515,57 @@ mod tttoiae {
         vec2: TtToiae @ Vec2, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_shape_cast: TtToiae @ Vec2, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         vec2_tiny: TtToiae @ Vec2, Config::TINY,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_tiny_shape_cast: TtToiae @ Vec2, Config::TINY,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         vec2_huge: TtToiae @ Vec2, Config::HUGE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        vec2_huge_shape_cast: TtToiae @ Vec2, Config::HUGE,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d_axis_aligned: TtToiae @ Transform2d, Config::AXIS_ALIGNED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_axis_aligned_shape_cast: TtToiae @ Transform2d, Config::AXIS_ALIGNED,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d_rigid: TtToiae @ Transform2d, Config::RIGID,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_rigid_shape_cast: TtToiae @ Transform2d, Config::RIGID,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d: TtToiae @ Transform2d, Config::BASE,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_shape_cast: TtToiae @ Transform2d, Config::BASE,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         transform2d_mirrored: TtToiae @ Transform2d, Config::MIRRORED,
         [
             Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/generic-shape-cast.md"]
-        transform2d_mirrored_shape_cast: TtToiae @ Transform2d, Config::MIRRORED,
-        [Ball-Poly2d, Poly2d-Ball]
     );
     cast_test!(
         vec2_at_rest: TtToiae at rest @ Vec2, Config::BASE,

@@ -20,10 +20,12 @@ fn square_poly(half: f32) -> Poly2d {
     Poly2d::from(Box2d::square(half))
 }
 
-// backlog/generic-shape-cast.md
+// Fixed bugs.
 
+/// Ball–Poly2d casts used conservative advancement, which stopped at t = 1, stalled once the
+/// shapes' projections along the motion overlapped, stepped exit times by 0.01 and never went
+/// below 0. They are a GJK ray cast now.
 #[test]
-#[ignore = "backlog/generic-shape-cast.md"]
 fn ball_poly_cast_past_t_one() {
     let (a, b) = (Vec2::ZERO, Vec2::new(10.0, 0.0));
     let ball = Ball::new(1.0);
@@ -37,7 +39,6 @@ fn ball_poly_cast_past_t_one() {
 }
 
 #[test]
-#[ignore = "backlog/generic-shape-cast.md"]
 fn ball_poly_cast_hits_corner() {
     // The ball meets the square's corner (2, 0.5) after travelling 2 - √0.75.
     let (a, b, vel) = (Vec2::ZERO, Vec2::new(3.0, 1.5), Vec2::new(2.0, 0.0));
@@ -54,7 +55,18 @@ fn ball_poly_cast_hits_corner() {
     );
 }
 
-// Fixed bugs.
+#[test]
+fn ball_poly_exit_and_past_entry() {
+    // The ball overlaps the square now: it entered at -1.5 and leaves at 2.5.
+    let (a, b, vel) = (Vec2::ZERO, Vec2::new(0.5, 0.0), Vec2::X);
+    let (ball, square) = (Ball::new(1.0), square_poly(1.0));
+    let r = ball.at(&a).tttoiae(&square.at(&b), vel);
+    assert!(near_span(r, (-1.5, 2.5)), "tttoiae {r:?}");
+    let r = ball.at(&a).toiae(&square.at(&b), vel);
+    assert!(near_span(r, (0.0, 2.5)), "toiae {r:?}");
+    let r = square.at(&b).tttoi(&ball.at(&a), -vel);
+    assert!(near(r, -1.5), "reversed tttoi {r:?}");
+}
 
 /// Bevy's `Transform` went through `Transform2d`, keeping only its largest scale, z included.
 /// It now acts on the plane z = 0 with its own x and y scale.

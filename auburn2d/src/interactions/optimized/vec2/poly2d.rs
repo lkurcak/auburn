@@ -1,17 +1,11 @@
 use crate::Vec2;
-use crate::algorithm::toi::{
-    conservative_advancement_toi, conservative_advancement_toi_unbounded,
-    conservative_advancement_toiae, conservative_advancement_toiae_unbounded,
-};
+use crate::algorithm::shape_cast;
 use crate::collider::Collider;
 use crate::interactions::optimized::poly2d_utils::{
     casts_from_span, edge_normals, point_polygon, project, swept_sat,
 };
 use crate::prelude::{Ball, Box2d, Point, Poly2d};
 use crate::property::support::Support;
-use crate::relation::cast::{
-    TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
-};
 use crate::transformation::Transformation2d;
 
 // Each overlap is worked out in the polygon's frame, where its vertices are as given.
@@ -33,83 +27,19 @@ fn point_poly(
 casts_from_span!(Point, Poly2d, Vec2, point_poly);
 
 // ============================================================================
-// Poly2d vs Ball  (kept as conservative advancement – exact ball-poly is complex)
+// Poly2d vs Ball
 // ============================================================================
 
-macro_rules! poly2d_ball_impls {
-    () => {
-        impl TimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Ball, Vec2> {
-            fn toi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-                conservative_advancement_toi(|dir| self.support(dir), |dir| other.support(dir), vel)
-            }
-        }
-        impl TimeOfImpact<Collider<'_, Ball, Vec2>> for Collider<'_, Poly2d, Vec2> {
-            fn toi(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<f32> {
-                conservative_advancement_toi(|dir| self.support(dir), |dir| other.support(dir), vel)
-            }
-        }
-        impl TimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>> for Collider<'_, Ball, Vec2> {
-            fn toiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-                conservative_advancement_toiae(
-                    |dir| self.support(dir),
-                    |dir| other.support(dir),
-                    vel,
-                )
-            }
-        }
-        impl TimeOfImpactAndExit<Collider<'_, Ball, Vec2>> for Collider<'_, Poly2d, Vec2> {
-            fn toiae(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-                conservative_advancement_toiae(
-                    |dir| self.support(dir),
-                    |dir| other.support(dir),
-                    vel,
-                )
-            }
-        }
-        impl TimeTravelingTimeOfImpact<Collider<'_, Poly2d, Vec2>> for Collider<'_, Ball, Vec2> {
-            fn tttoi(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<f32> {
-                conservative_advancement_toi_unbounded(
-                    |dir| self.support(dir),
-                    |dir| other.support(dir),
-                    vel,
-                )
-            }
-        }
-        impl TimeTravelingTimeOfImpact<Collider<'_, Ball, Vec2>> for Collider<'_, Poly2d, Vec2> {
-            fn tttoi(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<f32> {
-                conservative_advancement_toi_unbounded(
-                    |dir| self.support(dir),
-                    |dir| other.support(dir),
-                    vel,
-                )
-            }
-        }
-        impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Poly2d, Vec2>>
-            for Collider<'_, Ball, Vec2>
-        {
-            fn tttoiae(&self, other: &Collider<'_, Poly2d, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-                conservative_advancement_toiae_unbounded(
-                    |dir| self.support(dir),
-                    |dir| other.support(dir),
-                    vel,
-                )
-            }
-        }
-        impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Ball, Vec2>>
-            for Collider<'_, Poly2d, Vec2>
-        {
-            fn tttoiae(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-                conservative_advancement_toiae_unbounded(
-                    |dir| self.support(dir),
-                    |dir| other.support(dir),
-                    vel,
-                )
-            }
-        }
-    };
+/// When `ball`, moving at `vel`, overlaps `poly`, over all of time.
+fn ball_poly(
+    ball: &Collider<'_, Ball, Vec2>,
+    poly: &Collider<'_, Poly2d, Vec2>,
+    vel: Vec2,
+) -> Option<(f32, f32)> {
+    shape_cast(|dir| ball.support(dir), |dir| poly.support(dir), vel)
 }
 
-poly2d_ball_impls!();
+casts_from_span!(Ball, Poly2d, Vec2, ball_poly);
 
 // ============================================================================
 // Poly2d vs Box2d

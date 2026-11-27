@@ -2,7 +2,7 @@
 
 ## Now
 
-1. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
+1. [One generic shape cast in 3D, replacing conservative advancement](backlog/generic-shape-cast.md)
 1. [Cast coverage through the generic cast](backlog/cast-coverage.md)
 1. Release 0.4.0.
 1. [Playground: try the 2D queries by hand, on the desktop and in the browser](backlog/playground.md)
@@ -39,6 +39,7 @@
 
 ## Done
 
+- 2D casts without an exact formula, Ball–Poly2d so far, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; conservative advancement is gone from 2D (#30)
 - 2D bevy `Transform` uses its own x and y scale on the plane z = 0, so uneven scales and mirrors work and z no longer leaks in; `inverse` is the matrix inverse in 2D and 3D, and converting to `Transform2d`/`Transform3d` keeps an even scale exactly (#29)
 - `From<ScaleTranslate2d> for bevy Isometry2d` is gone: its body was `todo!()`, so it could only panic (#28)
 - `Poly2d` casts are one swept SAT that ignores winding and has no absolute tolerances, so tiny and clockwise polygons work; `regular` is counter-clockwise, `area` works, an empty polygon is a point at its origin, and debug builds check convexity (#27)
@@ -48,4 +49,3 @@
 - 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#23)
 - 3D EPA orients faces by their winding and keeps its polytope closed, so balls get their depth (#21)
 - `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)
-- GJK and EPA tolerances scale with the shapes (#18)
