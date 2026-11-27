@@ -16,22 +16,6 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 
 const X5: Vec3 = Vec3::new(5.0, 0.0, 0.0);
 
-// backlog/gjk-3d-cycling.md
-
-#[test]
-#[ignore = "backlog/gjk-3d-cycling.md"]
-fn ball_box_shallow_overlap() {
-    let ball = Ball::new(1.831_465_7);
-    let cube = Box3d::new(Vec3::new(1.752_178_4, 1.970_524_4, 1.287_569_6));
-    let (a, b) = (
-        Vec3::new(-0.940_023_4, -0.721_455_6, 1.826_620_1),
-        Vec3::new(1.542_484_3, 1.137_287_1, -1.097_314_2),
-    );
-    // About 0.0395 deep.
-    assert!(ball.at(&a).collides(&cube.at(&b)));
-    assert!(cube.at(&b).collides(&ball.at(&a)));
-}
-
 // backlog/cast-edge-cases.md
 
 #[test]
@@ -116,6 +100,31 @@ fn box_ball_toiae() {
 }
 
 // Fixed bugs.
+
+/// GJK searched along an edge's perpendicular in its triangle's plane rather than from the
+/// edge to the origin, so it cycled through the same edges and triangles and missed.
+#[test]
+fn ball_box_shallow_overlap() {
+    let ball = Ball::new(1.831_465_7);
+    let cube = Box3d::new(Vec3::new(1.752_178_4, 1.970_524_4, 1.287_569_6));
+    let (a, b) = (
+        Vec3::new(-0.940_023_4, -0.721_455_6, 1.826_620_1),
+        Vec3::new(1.542_484_3, 1.137_287_1, -1.097_314_2),
+    );
+    // About 0.0395 deep.
+    assert!(ball.at(&a).collides(&cube.at(&b)));
+    assert!(cube.at(&b).collides(&ball.at(&a)));
+    let p = ball.at(&a).penetrates(&cube.at(&b));
+    assert!(
+        p.is_some_and(|p| (p.length() - 0.0395).abs() < 1e-3),
+        "{p:?}"
+    );
+    let p = cube.at(&b).penetrates(&ball.at(&a));
+    assert!(
+        p.is_some_and(|p| (p.length() - 0.0395).abs() < 1e-3),
+        "{p:?}"
+    );
+}
 
 /// EPA oriented faces by which side of them the origin was on, so a face through the origin
 /// pointed inwards and the polytope folded onto itself.

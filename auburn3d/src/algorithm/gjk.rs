@@ -42,40 +42,76 @@ impl Simplex {
 
 /// Check if the simplex contains the origin and update the search direction.
 /// Returns true if the origin is contained in the simplex (collision detected).
+///
+/// Otherwise the simplex keeps only its part nearest the origin, and the search goes from
+/// there straight towards the origin. Searching any other way can find points that bring the
+/// simplex no closer, and then it cycles through the same states until it runs out of
+/// iterations.
+///
+/// Only the parts that contain the newest point are candidates. The rest is the previous
+/// simplex, which the newest point was found from, so the origin is nearer to something with
+/// the newest point in it. Testing the rest anyway only lets rounding send the search back to
+/// where it came from, which finds the newest point again, forever.
 fn handle_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
-    match simplex.count() {
-        2 => handle_line_simplex(simplex, direction),
-        3 => handle_triangle_simplex(simplex, direction),
-        4 => handle_tetrahedron_simplex(simplex, direction),
-        _ => false,
+    let nearest = match simplex.count() {
+        2 => nearest_on_segment(simplex.get(0), simplex.get(1), *direction),
+        3 => nearest_on_triangle(simplex.get(0), simplex.get(1), simplex.get(2), *direction),
+        4 => match nearest_on_tetrahedron(simplex, *direction) {
+            Some(nearest) => nearest,
+            None => return true,
+        },
+        _ => return false,
+    };
+    simplex.set(&nearest.points[..nearest.count]);
+    *direction = nearest.direction;
+    false
+}
+
+/// The part of a simplex nearest the origin, and the direction from it to the origin.
+struct Nearest {
+    /// Its corners, oldest first, the newest point last.
+    points: [Vec3; 3],
+    count: usize,
+    /// About as long as the simplex's edges. A cubic triple product would underflow for tiny
+    /// shapes, overflow for huge ones, and lose its precision in `Collider::support`, which
+    /// adds a translation to it.
+    direction: Vec3,
+}
+
+impl Nearest {
+    fn point(a: Vec3) -> Self {
+        Self {
+            points: [a, Vec3::ZERO, Vec3::ZERO],
+            count: 1,
+            direction: -a,
+        }
+    }
+
+    /// How far the origin is from this part of the simplex, whose newest point is `a`.
+    fn distance(&self, a: Vec3) -> f32 {
+        self.direction.normalize_or_zero().dot(-a)
     }
 }
 
-/// Handle the case where the simplex is a line segment.
-///
-/// Like the triangle case, it keeps the search direction about as long as the simplex's
-/// edges. A cubic triple product would underflow for tiny shapes, overflow for huge ones, and
-/// lose its precision in `Collider::support`, which adds a translation to it.
-fn handle_line_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
-    let a = simplex.get(1);
-    let b = simplex.get(0);
-
+/// The part of the segment from `b` to the newest point `a` nearest the origin. `searched` is
+/// the direction that found `a`.
+fn nearest_on_segment(b: Vec3, a: Vec3, searched: Vec3) -> Nearest {
     let ab = b - a;
     let ao = -a;
 
-    if ab.dot(ao) > 0.0 {
-        // The origin is past a, towards b: search perpendicular to ab, towards the origin.
-        *direction = match ab.cross(ao).try_normalize() {
-            Some(normal) => normal.cross(ab),
-            None => perpendicular_on_line(ab, *direction),
-        };
-    } else {
-        // The origin is closest to a
-        simplex.set(&[a]);
-        *direction = ao;
+    if ab.dot(ao) <= 0.0 {
+        return Nearest::point(a);
     }
-
-    false
+    // The origin is past a, towards b: search perpendicular to ab, towards the origin.
+    let direction = match ab.cross(ao).try_normalize() {
+        Some(normal) => normal.cross(ab),
+        None => perpendicular_on_line(ab, searched),
+    };
+    Nearest {
+        points: [b, a, Vec3::ZERO],
+        count: 2,
+        direction,
+    }
 }
 
 /// A search direction perpendicular to `ab` for when the origin is on its line, where any
@@ -93,97 +129,81 @@ fn perpendicular_on_line(ab: Vec3, searched: Vec3) -> Vec3 {
     }
 }
 
-/// Handle the case where the simplex is a triangle.
-fn handle_triangle_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
-    let a = simplex.get(2);
-    let b = simplex.get(1);
-    let c = simplex.get(0);
-
+/// The part of the triangle `c`, `b`, `a` nearest the origin, `a` being the newest point.
+fn nearest_on_triangle(c: Vec3, b: Vec3, a: Vec3, searched: Vec3) -> Nearest {
     let ab = b - a;
     let ac = c - a;
     let ao = -a;
 
     let Some(abc) = ab.cross(ac).try_normalize() else {
         // The points are on a line: keep the newest edge.
-        simplex.set(&[b, a]);
-        return handle_line_simplex(simplex, direction);
+        return nearest_on_segment(b, a, searched);
     };
 
-    // Edge AB: perpendicular pointing away from C
-    let ab_perp = ab.cross(abc);
-    if ab_perp.dot(ao) > 0.0 {
-        simplex.set(&[b, a]);
-        *direction = ab_perp;
-        return false;
+    // Outside an edge, in the triangle's plane, the origin is nearest that edge or a. Outside
+    // both, it is nearest a, or the one edge that it is past a along.
+    let outside_ab = ab.cross(abc).dot(ao) > 0.0;
+    let outside_ac = abc.cross(ac).dot(ao) > 0.0;
+    if outside_ab && (!outside_ac || ab.dot(ao) > 0.0) {
+        return nearest_on_segment(b, a, searched);
+    }
+    if outside_ac {
+        return nearest_on_segment(c, a, searched);
     }
 
-    // Edge AC: perpendicular pointing away from B
-    let ac_perp = abc.cross(ac);
-    if ac_perp.dot(ao) > 0.0 {
-        simplex.set(&[c, a]);
-        *direction = ac_perp;
-        return false;
-    }
-
-    // Origin is in the triangle's prism; check which side it is on
+    // Origin is in the triangle's prism; search towards the side it is on
     let normal = abc * ab.length();
     if normal.dot(ao) > 0.0 {
-        // Above the triangle
-        *direction = normal;
+        Nearest {
+            points: [c, b, a],
+            count: 3,
+            direction: normal,
+        }
     } else {
         // Below the triangle; swap b and c to keep winding consistent
-        simplex.set(&[b, c, a]);
-        *direction = -normal;
+        Nearest {
+            points: [b, c, a],
+            count: 3,
+            direction: -normal,
+        }
     }
-
-    false
 }
 
-/// Handle the case where the simplex is a tetrahedron.
-fn handle_tetrahedron_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
+/// The part of the tetrahedron nearest the origin, or `None` if the origin is inside it.
+///
+/// The origin can be in front of up to three faces. Each one's nearest part is a candidate,
+/// and the nearest of those wins.
+fn nearest_on_tetrahedron(simplex: &Simplex, searched: Vec3) -> Option<Nearest> {
     let a = simplex.get(3);
     let b = simplex.get(2);
     let c = simplex.get(1);
     let d = simplex.get(0);
-
-    let ab = b - a;
-    let ac = c - a;
-    let ad = d - a;
     let ao = -a;
 
-    // Face ABC: opposite vertex D
-    let abc = ab.cross(ac);
-    let abc_normal = if abc.dot(ad) > 0.0 { -abc } else { abc };
-    if abc_normal.dot(ao) > 0.0 {
-        simplex.set(&[c, b, a]);
-        *direction = abc_normal;
-        return handle_triangle_simplex(simplex, direction);
-    }
-
-    // Face ABD: opposite vertex C
-    let abd = ab.cross(ad);
-    let abd_normal = if abd.dot(ac) > 0.0 { -abd } else { abd };
-    if abd_normal.dot(ao) > 0.0 {
-        simplex.set(&[d, b, a]);
-        *direction = abd_normal;
-        return handle_triangle_simplex(simplex, direction);
-    }
-
-    // Face ACD: opposite vertex B
-    let acd = ac.cross(ad);
-    let acd_normal = if acd.dot(ab) > 0.0 { -acd } else { acd };
-    if acd_normal.dot(ao) > 0.0 {
-        simplex.set(&[d, c, a]);
-        *direction = acd_normal;
-        return handle_triangle_simplex(simplex, direction);
+    let mut nearest: Option<(Nearest, f32)> = None;
+    // Each face with a, and the corner opposite it.
+    for (p, q, opposite) in [(b, c, d), (c, d, b), (d, b, c)] {
+        let Some(normal) = (p - a).cross(q - a).try_normalize() else {
+            continue;
+        };
+        let outward = if normal.dot(opposite - a) > 0.0 {
+            -normal
+        } else {
+            normal
+        };
+        if outward.dot(ao) <= 0.0 {
+            continue;
+        }
+        let candidate = nearest_on_triangle(q, p, a, searched);
+        let distance = candidate.distance(a);
+        if nearest.as_ref().is_none_or(|(_, best)| distance < *best) {
+            nearest = Some((candidate, distance));
+        }
     }
 
     // Face BCD is the previous triangle, and a was found searching from it towards the
-    // origin, so the origin is on a's side of it. Testing it anyway only lets rounding send
-    // the search back to that triangle, which finds a again, forever.
-
-    // Origin is inside the tetrahedron
-    true
+    // origin, so the origin is on a's side of it.
+    nearest.map(|(nearest, _)| nearest)
 }
 
 /// Run the GJK algorithm to detect collision between two shapes.
