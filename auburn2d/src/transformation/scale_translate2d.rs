@@ -25,19 +25,6 @@ pub struct ScaleTranslate2d {
     pub scale: f32,
 }
 
-// Note: This From implementation is incomplete and not currently used.
-// Isometry2d in Bevy doesn't support non-uniform scale.
-#[cfg(feature = "bevy")]
-#[allow(unreachable_code)]
-impl From<ScaleTranslate2d> for bevy::prelude::Isometry2d {
-    fn from(_: ScaleTranslate2d) -> Self {
-        bevy::prelude::Isometry2d {
-            rotation: todo!(),
-            translation: todo!(),
-        }
-    }
-}
-
 impl Transformation2d for ScaleTranslate2d {
     fn apply_to_origin(&self) -> Vec2 {
         self.translation

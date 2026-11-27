@@ -2,7 +2,6 @@
 
 ## Now
 
-1. Remove `From<ScaleTranslate2d> for bevy Isometry2d` (bevy feature): its body is `todo!()`, so it can only panic. Removing it is technically breaking.
 1. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
 1. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
 1. [Cast coverage through the generic cast](backlog/cast-coverage.md)
@@ -34,11 +33,14 @@
 - no_std. Tried and reverted in 2024; the CI no-std job exists but is skipped. Low priority.
 - `cargo test --no-default-features --features bevy` doesn't compile: `tests/randomized` in both
   crates imports `glam` directly. CI doesn't run that combination.
+- `From<Transform2d> for bevy Isometry2d` drops the scale without saying so: document it, or
+  convert only when the scale is 1.
 - With `--all-features`, cargo warns that the optional `glam` dependency is unused in both crates,
   because bevy's `Vec3` wins (cargo's `unused_dependencies` lint).
 
 ## Done
 
+- `From<ScaleTranslate2d> for bevy Isometry2d` is gone: its body was `todo!()`, so it could only panic (#28)
 - `Poly2d` casts are one swept SAT that ignores winding and has no absolute tolerances, so tiny and clockwise polygons work; `regular` is counter-clockwise, `area` works, an empty polygon is a point at its origin, and debug builds check convexity (#27)
 - Ball and point casts read off one overlap span: no NaN at rest, negative time-traveling times in 3D, tiny velocities, Point–Point through-paths; the at-rest answers are documented and every pair gives them (#26)
 - `Transform2d` ball casts scale each radius once, by its own |scale|, and ball `toiae` gives the exit when starting inside; box casts take |scale| too (#25)
@@ -48,4 +50,3 @@
 - `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)
 - GJK and EPA tolerances scale with the shapes (#18)
 - Reversed 3D `toiae`/`tttoiae` keep entry before exit (#17)
-- Randomized suites against an exact ground truth, failing checks ignored by backlog item (#16)
