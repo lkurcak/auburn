@@ -1,5 +1,5 @@
 [workspace]
-members = ["auburn2d", "auburn3d"]
+members = ["auburn2d", "auburn3d", "playground"]
 resolver = "2"
 
 [workspace.package]
