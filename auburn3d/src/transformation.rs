@@ -16,4 +16,20 @@ pub trait Transformation3d {
 
     fn inverse(&self) -> Self;
     fn compose(&self, other: &Self) -> Self;
+
+    /// Maps a world-space direction to the local-space direction with the same support point:
+    /// the transpose of the linear part applied to `dir`, without the translation. Any positive
+    /// multiple of it works as well.
+    ///
+    /// [`Collider`](crate::prelude::Collider)'s support function calls it. The default goes
+    /// through [`inverse`](Self::inverse), so it is right only for uniform scale, and far from
+    /// the origin it loses short directions to the translation cancelling out. Implement it to
+    /// avoid both.
+    fn support_direction(&self, dir: Vec3) -> Vec3
+    where
+        Self: Sized,
+    {
+        let inverse = self.inverse();
+        inverse.apply(dir) - inverse.apply_to_origin()
+    }
 }

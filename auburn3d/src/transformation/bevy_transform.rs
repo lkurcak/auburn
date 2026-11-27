@@ -18,6 +18,11 @@ impl Transformation3d for bevy::prelude::Transform {
     fn compose(&self, other: &Self) -> Self {
         *self * *other
     }
+
+    /// Uses the real per-axis scale, like [`apply`](Transformation3d::apply).
+    fn support_direction(&self, dir: Vec3) -> Vec3 {
+        self.scale * (self.rotation.inverse() * dir)
+    }
 }
 
 impl From<Transform3d> for bevy::prelude::Transform {

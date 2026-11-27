@@ -22,6 +22,10 @@ impl Transformation3d for Pos3d {
     fn compose(&self, other: &Self) -> Self {
         Pos3d(self.0 + other.0)
     }
+
+    fn support_direction(&self, dir: Vec3) -> Vec3 {
+        dir
+    }
 }
 
 impl From<Vec3> for Pos3d {

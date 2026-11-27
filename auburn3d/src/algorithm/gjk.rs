@@ -65,10 +65,9 @@ fn handle_line_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
 
     if ab.dot(ao) > 0.0 {
         // The origin is past a, towards b: search perpendicular to ab, towards the origin.
-        // If the origin is on the line, any perpendicular will do.
         *direction = match ab.cross(ao).try_normalize() {
             Some(normal) => normal.cross(ab),
-            None => ab.any_orthogonal_vector(),
+            None => perpendicular_on_line(ab, *direction),
         };
     } else {
         // The origin is closest to a
@@ -77,6 +76,21 @@ fn handle_line_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
     }
 
     false
+}
+
+/// A search direction perpendicular to `ab` for when the origin is on its line, where any
+/// perpendicular will do.
+///
+/// It is also perpendicular to `searched`, the direction that found the newest point. If that
+/// was already perpendicular to the line and found nothing new, as on a flat Minkowski
+/// difference, the search turns a quarter around the line instead of repeating forever.
+fn perpendicular_on_line(ab: Vec3, searched: Vec3) -> Vec3 {
+    let turned = ab.normalize_or_zero().cross(searched.normalize_or_zero());
+    if turned.length_squared() > 1e-6 {
+        turned.normalize() * ab.length()
+    } else {
+        ab.any_orthogonal_vector()
+    }
 }
 
 /// Handle the case where the simplex is a triangle.

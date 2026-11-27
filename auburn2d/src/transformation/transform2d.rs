@@ -51,6 +51,10 @@ impl Transformation2d for Transform2d {
             scale: self.scale * other.scale,
         }
     }
+
+    fn support_direction(&self, dir: Vec2) -> Vec2 {
+        self.scale * (self.rot.inverse() * dir)
+    }
 }
 
 #[cfg(feature = "bevy")]

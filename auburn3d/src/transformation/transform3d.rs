@@ -50,6 +50,10 @@ impl Transformation3d for Transform3d {
             scale: self.scale * other.scale,
         }
     }
+
+    fn support_direction(&self, dir: Vec3) -> Vec3 {
+        self.scale * (self.rot.inverse() * dir)
+    }
 }
 
 impl Transform3d {

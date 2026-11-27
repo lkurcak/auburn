@@ -14,3 +14,6 @@ times the cases). Reproduced on the commit of #18.
   exactly the origin, i.e. for shapes that touch.
 - Failure rates move by a few percent with the tetrahedron GJK hands over, but not with the
   stopping tolerance.
+- `box_box_penetrates` (`tests/definitions.rs`) and `box_box_penetration_depth` pass with
+  `--ignored` since `Collider::support` maps directions exactly, only because GJK hands over
+  a different tetrahedron. They stay ignored until EPA is fixed.
