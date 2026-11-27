@@ -124,95 +124,59 @@ mod penetrates {
     use super::*;
     static_test!(
         vec3: penetrates @ Vec3, Config::BASE,
-        [Point-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Box3d-Box3d]
     );
     static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        vec3_epa: penetrates @ Vec3, Config::BASE,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        #[ignore = "backlog/gjk-3d-cycling.md"]
+        vec3_gjk: penetrates @ Vec3, Config::BASE,
+        [Ball-Box3d]
     );
     static_test!(
         pos3d: penetrates @ Pos3d, Config::BASE,
-        [Point-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Box3d-Box3d]
     );
     static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        pos3d_epa: penetrates @ Pos3d, Config::BASE,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        #[ignore = "backlog/gjk-3d-cycling.md"]
+        pos3d_gjk: penetrates @ Pos3d, Config::BASE,
+        [Ball-Box3d]
     );
     static_test!(
         scale_translate3d: penetrates @ ScaleTranslate3d, Config::BASE,
-        [Point-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        scale_translate3d_epa: penetrates @ ScaleTranslate3d, Config::BASE,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         scale_translate3d_mirrored: penetrates @ ScaleTranslate3d, Config::MIRRORED,
-        [Point-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        scale_translate3d_mirrored_epa: penetrates @ ScaleTranslate3d, Config::MIRRORED,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         transform3d: penetrates @ Transform3d, Config::BASE,
-        [Point-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        transform3d_epa: penetrates @ Transform3d, Config::BASE,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         transform3d_mirrored: penetrates @ Transform3d, Config::MIRRORED,
-        [Point-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Box3d-Box3d]
     );
     static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        transform3d_mirrored_epa: penetrates @ Transform3d, Config::MIRRORED,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        #[ignore = "backlog/gjk-3d-cycling.md"]
+        transform3d_mirrored_gjk: penetrates @ Transform3d, Config::MIRRORED,
+        [Ball-Box3d]
     );
     static_test!(
         transform3d_tiny: penetrates @ Transform3d, Config::TINY,
-        [Point-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        transform3d_tiny_epa: penetrates @ Transform3d, Config::TINY,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         transform3d_huge: penetrates @ Transform3d, Config::HUGE,
-        [Point-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        transform3d_huge_epa: penetrates @ Transform3d, Config::HUGE,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         vec3_far: penetrates @ Vec3, Config::FAR,
-        [Point-Box3d]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-3d.md"]
-        vec3_far_epa: penetrates @ Vec3, Config::FAR,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
     static_test!(
         #[cfg(feature = "bevy")]
         bevy_transform: penetrates @ bevy::prelude::Transform, Config::BASE,
-        [Point-Box3d]
-    );
-    static_test!(
-        #[cfg(feature = "bevy")]
-        #[ignore = "backlog/epa-3d.md"]
-        bevy_transform_epa: penetrates @ bevy::prelude::Transform, Config::BASE,
-        [Point-Ball, Ball-Ball, Ball-Box3d, Box3d-Box3d]
+        [Point-Ball, Point-Box3d, Ball-Ball, Ball-Box3d, Box3d-Box3d]
     );
 }
 

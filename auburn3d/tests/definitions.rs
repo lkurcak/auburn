@@ -110,7 +110,6 @@ fn ball_box_definitions() {
 }
 
 #[test]
-#[ignore = "backlog/epa-3d.md"]
 fn ball_box_penetrates() {
     let (ball, cube) = (Ball::new(1.0), Box3d::cube(2.0));
     let (a, b) = (ball.at(&A), cube.at(&B));
@@ -141,7 +140,6 @@ fn box_box_definitions() {
 }
 
 #[test]
-#[ignore = "backlog/epa-3d.md"]
 fn box_box_penetrates() {
     let (small, large) = (Box3d::cube(1.0), Box3d::cube(2.0));
     let (a, b) = (small.at(&A), large.at(&B));
