@@ -1,0 +1,36 @@
+[package]
+name = "auburn-playground"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+description = "Try auburn2d's queries by hand, on the desktop and in the browser."
+repository = { workspace = true }
+publish = false
+
+[dependencies]
+auburn2d = { path = "../auburn2d" }
+# glow, not eframe's default wgpu: it's all the playground needs, and a fraction of the build.
+eframe = { version = "0.37.0", default-features = false, features = [
+    "accesskit",
+    "clipboard",
+    "default_fonts",
+    "glow",
+    "wayland",
+    "web_screen_reader",
+    "x11",
+] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+    "console",
+    "Document",
+    "Element",
+    "History",
+    "HtmlCanvasElement",
+    "Location",
+    "Window",
+] }
+
+[lints]
+workspace = true
