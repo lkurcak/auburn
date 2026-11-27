@@ -19,37 +19,6 @@ fn square_poly(half: f32) -> Poly2d {
     Poly2d::from(Box2d::square(half))
 }
 
-// backlog/epa-2d.md
-
-#[test]
-#[ignore = "backlog/epa-2d.md"]
-fn deep_near_concentric_balls_separate() {
-    let (a, b) = (Vec2::new(0.1655, 0.1422), Vec2::ZERO);
-    let (small, large) = (Ball::new(0.7204), Ball::new(4.7942));
-    let p = small.at(&a).penetrates(&large.at(&b)).unwrap();
-    let left = (0.7204 + 4.7942) - (a + p - b).length();
-    assert!(left.abs() < 1e-2, "p = {p:?} leaves {left} of overlap");
-}
-
-#[test]
-#[ignore = "backlog/epa-2d.md"]
-fn concentric_balls_penetrate_by_full_depth() {
-    let z = Vec2::ZERO;
-    let p = Ball::new(1.0)
-        .at(&z)
-        .penetrates(&Ball::new(2.0).at(&z))
-        .unwrap();
-    assert!((p.length() - 3.0).abs() < 1e-3, "{p:?}");
-}
-
-#[test]
-fn coincident_boxes_penetrate_by_full_depth() {
-    let z = Vec2::ZERO;
-    let rect = Box2d::new(Vec2::new(2.0, 1.0));
-    let p = rect.at(&z).penetrates(&rect.at(&z)).unwrap();
-    assert!((p.length() - 2.0).abs() < 1e-3, "{p:?}");
-}
-
 // backlog/transform2d-scale.md
 
 #[test]
@@ -198,6 +167,40 @@ fn ball_poly_cast_hits_corner() {
 }
 
 // Fixed bugs.
+
+/// EPA refined a near-circle evenly, so it ran out of iterations before the tiny differences
+/// between directions showed, and returned its last edge, pointing anywhere. It now returns
+/// the shortest support distance it has seen.
+#[test]
+fn deep_near_concentric_balls_separate() {
+    let (a, b) = (Vec2::new(0.1655, 0.1422), Vec2::ZERO);
+    let (small, large) = (Ball::new(0.7204), Ball::new(4.7942));
+    let p = small.at(&a).penetrates(&large.at(&b)).unwrap();
+    let depth = (0.7204 + 4.7942) - (a - b).length();
+    let left = (0.7204 + 4.7942) - (a + p - b).length();
+    assert!(
+        (p.length() - depth).abs() < 1e-3 && left.abs() < 1e-3,
+        "p = {p:?} for a depth of {depth} leaves {left} of overlap"
+    );
+}
+
+#[test]
+fn concentric_balls_penetrate_by_full_depth() {
+    let z = Vec2::ZERO;
+    let p = Ball::new(1.0)
+        .at(&z)
+        .penetrates(&Ball::new(2.0).at(&z))
+        .unwrap();
+    assert!((p.length() - 3.0).abs() < 1e-3, "{p:?}");
+}
+
+#[test]
+fn coincident_boxes_penetrate_by_full_depth() {
+    let z = Vec2::ZERO;
+    let rect = Box2d::new(Vec2::new(2.0, 1.0));
+    let p = rect.at(&z).penetrates(&rect.at(&z)).unwrap();
+    assert!((p.length() - 2.0).abs() < 1e-3, "{p:?}");
+}
 
 /// GJK compared a cubic triple product with an absolute `1e-10`, so small shapes collided
 /// across a gap, depending on the order.
