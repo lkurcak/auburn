@@ -1,52 +1,30 @@
+//! Balls under a [`Transform2d`] are cast as world-space balls with the exact [`Vec2`] casts;
+//! see `world_ball` in `ball_point`.
+
+use super::ball_point::world_ball;
 use crate::Vec2;
 use crate::collider::Collider;
 use crate::relation::cast::{
     TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
 };
-use crate::shape::{ball::Ball, point::Point};
+use crate::shape::ball::Ball;
 use crate::transformation::Transform2d;
 
-impl TimeOfImpact<Collider<'_, Ball, Transform2d>> for Collider<'_, Ball, Transform2d> {
-    fn toi(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<f32> {
-        let a = Collider::new(&Point, self.isometry);
-        let big_ball = Ball::new(
-            self.shape.radius * self.isometry.scale + other.shape.radius * other.isometry.scale,
-        );
-        let b = Collider::new(&big_ball, other.isometry);
-        a.toi(&b, vel)
-    }
+macro_rules! ball_ball_impls {
+    ($($Trait:ident::$method:ident -> $Out:ty;)*) => {$(
+        impl $Trait<Collider<'_, Ball, Transform2d>> for Collider<'_, Ball, Transform2d> {
+            fn $method(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<$Out> {
+                let (a, b) = (world_ball(self), world_ball(other));
+                let other = Collider::new(&b, &other.isometry.pos);
+                Collider::new(&a, &self.isometry.pos).$method(&other, vel)
+            }
+        }
+    )*};
 }
-impl TimeOfImpactAndExit<Collider<'_, Ball, Transform2d>> for Collider<'_, Ball, Transform2d> {
-    fn toiae(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<(f32, f32)> {
-        let a = Collider::new(&Point, self.isometry);
-        let big_ball = Ball::new(
-            self.shape.radius * self.isometry.scale + other.shape.radius * other.isometry.scale,
-        );
-        let b = Collider::new(&big_ball, other.isometry);
-        a.toiae(&b, vel)
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Ball, Transform2d>>
-    for Collider<'_, Ball, Transform2d>
-{
-    fn tttoi(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<f32> {
-        let a = Collider::new(&Point, self.isometry);
-        let big_ball = Ball::new(
-            self.shape.radius * self.isometry.scale + other.shape.radius * other.isometry.scale,
-        );
-        let b = Collider::new(&big_ball, other.isometry);
-        a.tttoi(&b, vel)
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Ball, Transform2d>>
-    for Collider<'_, Ball, Transform2d>
-{
-    fn tttoiae(&self, other: &Collider<'_, Ball, Transform2d>, vel: Vec2) -> Option<(f32, f32)> {
-        let a = Collider::new(&Point, self.isometry);
-        let big_ball = Ball::new(
-            self.shape.radius * self.isometry.scale + other.shape.radius * other.isometry.scale,
-        );
-        let b = Collider::new(&big_ball, other.isometry);
-        a.tttoiae(&b, vel)
-    }
+
+ball_ball_impls! {
+    TimeOfImpact::toi -> f32;
+    TimeOfImpactAndExit::toiae -> (f32, f32);
+    TimeTravelingTimeOfImpact::tttoi -> f32;
+    TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32);
 }

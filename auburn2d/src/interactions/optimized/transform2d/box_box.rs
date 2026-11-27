@@ -39,7 +39,7 @@ fn box_box_overlap_interval(
         .apply(self_isometry.apply_to_origin());
     let local_vel = other_isometry.rot.inverse() * vel / other_isometry.scale;
     let local_rot = other_isometry.rot.inverse() * self_isometry.rot;
-    let local_scale = self_isometry.scale / other_isometry.scale;
+    let local_scale = (self_isometry.scale / other_isometry.scale).abs();
     let local_half_size = self_shape.half_size * local_scale;
     let b_half = other_shape.half_size;
 
@@ -107,7 +107,7 @@ impl TimeOfImpact<Collider<'_, Box2d, Transform2d>> for Collider<'_, Box2d, Tran
             .apply(self.isometry.apply_to_origin());
         let local_vel = other.isometry.rot.inverse() * vel / other.isometry.scale;
         let local_rot = other.isometry.rot.inverse() * self.isometry.rot;
-        let local_scale = self.isometry.scale / other.isometry.scale;
+        let local_scale = (self.isometry.scale / other.isometry.scale).abs();
         let local_half_size = self.shape.half_size * local_scale;
         let b_half = other.shape.half_size;
 
@@ -144,7 +144,7 @@ impl TimeOfImpactAndExit<Collider<'_, Box2d, Transform2d>> for Collider<'_, Box2
             .apply(self.isometry.apply_to_origin());
         let local_vel = other.isometry.rot.inverse() * vel / other.isometry.scale;
         let local_rot = other.isometry.rot.inverse() * self.isometry.rot;
-        let local_scale = self.isometry.scale / other.isometry.scale;
+        let local_scale = (self.isometry.scale / other.isometry.scale).abs();
         let local_half_size = self.shape.half_size * local_scale;
         let b_half = other.shape.half_size;
 
@@ -183,7 +183,7 @@ impl TimeTravelingTimeOfImpact<Collider<'_, Box2d, Transform2d>>
             .apply(self.isometry.apply_to_origin());
         let local_vel = other.isometry.rot.inverse() * vel / other.isometry.scale;
         let local_rot = other.isometry.rot.inverse() * self.isometry.rot;
-        let local_scale = self.isometry.scale / other.isometry.scale;
+        let local_scale = (self.isometry.scale / other.isometry.scale).abs();
         let local_half_size = self.shape.half_size * local_scale;
         let b_half = other.shape.half_size;
 
@@ -222,7 +222,7 @@ impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Box2d, Transform2d>>
             .apply(self.isometry.apply_to_origin());
         let local_vel = other.isometry.rot.inverse() * vel / other.isometry.scale;
         let local_rot = other.isometry.rot.inverse() * self.isometry.rot;
-        let local_scale = self.isometry.scale / other.isometry.scale;
+        let local_scale = (self.isometry.scale / other.isometry.scale).abs();
         let local_half_size = self.shape.half_size * local_scale;
         let b_half = other.shape.half_size;
 

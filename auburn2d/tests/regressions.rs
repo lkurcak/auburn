@@ -19,54 +19,6 @@ fn square_poly(half: f32) -> Poly2d {
     Poly2d::from(Box2d::square(half))
 }
 
-// backlog/transform2d-scale.md
-
-#[test]
-#[ignore = "backlog/transform2d-scale.md"]
-fn transform2d_ball_ball_scale_applies_once() {
-    // Ball(1) at 0 against Ball(1) scaled by 2 at (5, 0): a gap of 2.
-    let a = Transform2d::from_translation(Vec2::ZERO);
-    let b = Transform2d::from_translation(Vec2::new(5.0, 0.0)).with_scale(2.0);
-    let ball = Ball::new(1.0);
-    assert!(!ball.at(&a).collides(&ball.at(&b)));
-    assert!(near(ball.at(&a).toi(&ball.at(&b), Vec2::X), 2.0));
-}
-
-#[test]
-#[ignore = "backlog/transform2d-scale.md"]
-fn transform2d_ball_point_uses_the_ball_scale() {
-    // Ball(1) scaled by 2 at 0, point at (3, 0) with its own scale.
-    let ball = Transform2d::from_translation(Vec2::ZERO).with_scale(2.0);
-    let point = Transform2d::from_translation(Vec2::new(3.0, 0.0)).with_scale(0.5);
-    let r = Ball::new(1.0).at(&ball).toi(&Point.at(&point), Vec2::X);
-    assert!(near(r, 1.0), "{r:?}");
-    let r = Point.at(&point).toi(&Ball::new(1.0).at(&ball), Vec2::NEG_X);
-    assert!(near(r, 1.0), "{r:?}");
-}
-
-#[test]
-#[ignore = "backlog/transform2d-scale.md"]
-fn transform2d_toiae_exits_when_starting_inside() {
-    let t = Transform2d::from_translation(Vec2::ZERO);
-    let r = Point.at(&t).toiae(&Ball::new(1.0).at(&t), Vec2::X);
-    assert!(near_span(r, (0.0, 1.0)), "{r:?}");
-}
-
-#[test]
-#[ignore = "backlog/transform2d-scale.md"]
-fn transform2d_negative_scale_casts() {
-    // Scale -1 at 0, the other at (5, 0): a gap of 3.
-    let a = Transform2d::from_translation(Vec2::ZERO).with_scale(-1.0);
-    let b = Transform2d::from_translation(Vec2::new(5.0, 0.0));
-    let (ball, square) = (Ball::new(1.0), Box2d::square(1.0));
-    let r = ball.at(&a).toi(&ball.at(&b), Vec2::X);
-    assert!(near(r, 3.0), "ball-ball {r:?}");
-    let r = square.at(&a).toi(&square.at(&b), Vec2::X);
-    assert!(near(r, 3.0), "box-box {r:?}");
-    let r = ball.at(&a).toi(&square.at(&b), Vec2::X);
-    assert!(near(r, 3.0), "ball-box {r:?}");
-}
-
 // backlog/cast-edge-cases.md
 
 #[test]
@@ -167,6 +119,51 @@ fn ball_poly_cast_hits_corner() {
 }
 
 // Fixed bugs.
+
+/// `Transform2d` ball casts scaled radii twice, by the wrong collider's scale, or by a
+/// negative scale, and `toiae` gave no exit when starting inside. They now cast the
+/// world-space balls, of radius `r * |scale|`, with the exact `Vec2` casts.
+#[test]
+fn transform2d_ball_ball_scale_applies_once() {
+    // Ball(1) at 0 against Ball(1) scaled by 2 at (5, 0): a gap of 2.
+    let a = Transform2d::from_translation(Vec2::ZERO);
+    let b = Transform2d::from_translation(Vec2::new(5.0, 0.0)).with_scale(2.0);
+    let ball = Ball::new(1.0);
+    assert!(!ball.at(&a).collides(&ball.at(&b)));
+    assert!(near(ball.at(&a).toi(&ball.at(&b), Vec2::X), 2.0));
+}
+
+#[test]
+fn transform2d_ball_point_uses_the_ball_scale() {
+    // Ball(1) scaled by 2 at 0, point at (3, 0) with its own scale.
+    let ball = Transform2d::from_translation(Vec2::ZERO).with_scale(2.0);
+    let point = Transform2d::from_translation(Vec2::new(3.0, 0.0)).with_scale(0.5);
+    let r = Ball::new(1.0).at(&ball).toi(&Point.at(&point), Vec2::X);
+    assert!(near(r, 1.0), "{r:?}");
+    let r = Point.at(&point).toi(&Ball::new(1.0).at(&ball), Vec2::NEG_X);
+    assert!(near(r, 1.0), "{r:?}");
+}
+
+#[test]
+fn transform2d_toiae_exits_when_starting_inside() {
+    let t = Transform2d::from_translation(Vec2::ZERO);
+    let r = Point.at(&t).toiae(&Ball::new(1.0).at(&t), Vec2::X);
+    assert!(near_span(r, (0.0, 1.0)), "{r:?}");
+}
+
+#[test]
+fn transform2d_negative_scale_casts() {
+    // Scale -1 at 0, the other at (5, 0): a gap of 3.
+    let a = Transform2d::from_translation(Vec2::ZERO).with_scale(-1.0);
+    let b = Transform2d::from_translation(Vec2::new(5.0, 0.0));
+    let (ball, square) = (Ball::new(1.0), Box2d::square(1.0));
+    let r = ball.at(&a).toi(&ball.at(&b), Vec2::X);
+    assert!(near(r, 3.0), "ball-ball {r:?}");
+    let r = square.at(&a).toi(&square.at(&b), Vec2::X);
+    assert!(near(r, 3.0), "box-box {r:?}");
+    let r = ball.at(&a).toi(&square.at(&b), Vec2::X);
+    assert!(near(r, 3.0), "ball-box {r:?}");
+}
 
 /// EPA refined a near-circle evenly, so it ran out of iterations before the tiny differences
 /// between directions showed, and returned its last edge, pointing anywhere. It now returns
