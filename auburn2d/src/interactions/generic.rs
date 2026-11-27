@@ -54,7 +54,6 @@ where
     }
 }
 
-// NOTE: Generic TOI implementations are not possible without specialization (unstable feature).
-// The specific Vec2 implementations provide optimized TOI for common cases.
-// For other transformation types, TOI would need to be implemented separately or use
-// the conservative_advancement_toi function from the algorithm module directly.
+// Casts can't be generic here: without specialization (unstable), a blanket impl would clash
+// with the exact casts for particular pairs. A pair without an exact cast reads its casts off
+// `algorithm::shape_cast`, as Ball–Poly2d does.

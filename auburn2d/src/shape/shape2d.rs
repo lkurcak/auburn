@@ -61,9 +61,7 @@ impl Support for Shape2d {
     }
 }
 
-// NOTE: Collides and Penetrates now use the generic GJK/EPA implementations
-// But TimeOfImpact still needs specific implementations because we don't have
-// a generic conservative advancement implementation integrated into the trait system yet.
+// Collides and Penetrates use the generic GJK and EPA. Casts go to the variant's own casts.
 
 macro_rules! shape2d_against_the_world {
     ($trait:ident; $fn:ident; $tr:ty; $out:ty; ($($args:tt)*); ($($args_out:tt)*)) => {
