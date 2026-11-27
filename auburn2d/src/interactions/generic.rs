@@ -54,6 +54,4 @@ where
     }
 }
 
-// Casts can't be generic here: without specialization (unstable), a blanket impl would clash
-// with the exact casts for particular pairs. A pair without an exact cast reads its casts off
-// `algorithm::shape_cast`, as Ball–Poly2d does.
+// The casts are generic too, in `interactions::cast`, with exact formulas for some pairs.

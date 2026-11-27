@@ -1,4 +1,4 @@
-use crate::Vec3;
+use crate::{Quat, Vec3};
 
 #[cfg(feature = "bevy")]
 pub mod bevy_transform;
@@ -31,5 +31,16 @@ pub trait Transformation3d {
     {
         let inverse = self.inverse();
         inverse.apply(dir) - inverse.apply_to_origin()
+    }
+
+    /// The linear part, if it is a rotation after a scale along the local axes: the rotation,
+    /// and the scale along x, y and z, negative to mirror. Then `apply(p)` is
+    /// `rot * (scale * p) + apply_to_origin()`.
+    ///
+    /// Casts use it to tell when a ball stays a ball, and have exact formulas for some of
+    /// those. The default, `None`, is always right: casts then go through the shapes' support
+    /// functions.
+    fn rotation_and_scale(&self) -> Option<(Quat, Vec3)> {
+        None
     }
 }

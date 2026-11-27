@@ -55,6 +55,10 @@ impl Transformation2d for Transform2d {
     fn support_direction(&self, dir: Vec2) -> Vec2 {
         self.scale * (self.rot.inverse() * dir)
     }
+
+    fn rotation_and_scale(&self) -> Option<(Rotor2d, Vec2)> {
+        Some((self.rot, Vec2::splat(self.scale)))
+    }
 }
 
 #[cfg(feature = "bevy")]

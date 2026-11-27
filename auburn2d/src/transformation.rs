@@ -33,4 +33,15 @@ pub trait Transformation2d {
         let inverse = self.inverse();
         inverse.apply(dir) - inverse.apply_to_origin()
     }
+
+    /// The linear part, if it is a rotation after a scale along the local axes: the rotation,
+    /// and the scale along x and y, negative to mirror. Then `apply(p)` is
+    /// `rot * (scale * p) + apply_to_origin()`.
+    ///
+    /// Casts use it to tell when a ball stays a ball and a box stays a box, and have exact
+    /// formulas for some of those. The default, `None`, is always right: casts then go
+    /// through the shapes' support functions.
+    fn rotation_and_scale(&self) -> Option<(Rotor2d, Vec2)> {
+        None
+    }
 }

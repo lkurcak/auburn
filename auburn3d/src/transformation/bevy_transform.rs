@@ -26,6 +26,10 @@ impl Transformation3d for Transform {
     fn support_direction(&self, dir: Vec3) -> Vec3 {
         self.scale * (self.rotation.inverse() * dir)
     }
+
+    fn rotation_and_scale(&self) -> Option<(crate::Quat, Vec3)> {
+        Some((self.rotation, self.scale))
+    }
 }
 
 impl From<Transform3d> for Transform {

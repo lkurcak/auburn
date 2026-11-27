@@ -2,7 +2,6 @@
 
 ## Now
 
-1. [Cast coverage through the generic cast](backlog/cast-coverage.md)
 1. Release 0.4.0.
 1. [Playground: try the 2D queries by hand, on the desktop and in the browser](backlog/playground.md)
 1. Publish the playground on GitHub Pages and link it from the README. Its `pages.yml` has to
@@ -37,10 +36,13 @@
   because bevy's `Vec3` wins (cargo's `unused_dependencies` lint).
 - Bring 3D's ray cast fixes to 2D's `shape_cast`: balls as a centre and a radius
   (`rounded_shape_cast`), and a hit test that allows for the angle the ray meets the set at.
-  2D passes at 200× without them, but 3D got about 1 case in 60 000 wrong.
+  Ball–Poly2d still goes through it and passes at 200×. Before Ball–Box2d got an exact cast,
+  it got 1 turned Ball–Box2d case in 6 000 wrong at huge sizes, at 20×: an exit 1% late.
+- [3D `shape_cast` takes near-misses for grazes](backlog/ray-cast-near-miss.md).
 
 ## Done
 
+- Any two colliders cast, whatever their shapes and transformations, mixed ones too: one generic impl per cast, with exact formulas for points, balls, boxes and polygons (in 3D: points, balls, and points against boxes) and the GJK ray cast for the rest; `Shape::primitive` and `rotation_and_scale` tell when a shape keeps its form; the ~70 hand-written per-pair impls are gone (#32)
 - 3D casts without an exact formula, every pair with a `Box3d`, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`, with a ball as its centre and radius: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; `Transform3d` Point and Ball pairs use the exact `Vec3` casts; conservative advancement is gone (#31)
 - 2D casts without an exact formula, Ball–Poly2d so far, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; conservative advancement is gone from 2D (#30)
 - 2D bevy `Transform` uses its own x and y scale on the plane z = 0, so uneven scales and mirrors work and z no longer leaks in; `inverse` is the matrix inverse in 2D and 3D, and converting to `Transform2d`/`Transform3d` keeps an even scale exactly (#29)
@@ -50,4 +52,3 @@
 - `Transform2d` ball casts scale each radius once, by its own |scale|, and ball `toiae` gives the exit when starting inside; box casts take |scale| too (#25)
 - 2D EPA returns the shortest support distance it finds, so deep, near-concentric balls get their depth and direction (#24)
 - 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#23)
-- 3D EPA orients faces by their winding and keeps its polytope closed, so balls get their depth (#21)

@@ -1,5 +1,6 @@
 use super::Transformation2d;
 use crate::Vec2;
+use crate::rotor2d::Rotor2d;
 use std::ops::Mul;
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -32,6 +33,10 @@ impl Transformation2d for Pos2d {
 
     fn support_direction(&self, dir: Vec2) -> Vec2 {
         dir
+    }
+
+    fn rotation_and_scale(&self) -> Option<(Rotor2d, Vec2)> {
+        self.0.rotation_and_scale()
     }
 }
 

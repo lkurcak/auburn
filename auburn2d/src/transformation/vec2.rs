@@ -1,5 +1,6 @@
 use super::Transformation2d;
 use crate::Vec2;
+use crate::rotor2d::Rotor2d;
 
 impl Transformation2d for Vec2 {
     fn apply_to_origin(&self) -> Vec2 {
@@ -22,6 +23,10 @@ impl Transformation2d for Vec2 {
 
     fn support_direction(&self, dir: Vec2) -> Vec2 {
         dir
+    }
+
+    fn rotation_and_scale(&self) -> Option<(Rotor2d, Vec2)> {
+        Some((Rotor2d::IDENTITY, Vec2::ONE))
     }
 }
 

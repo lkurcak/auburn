@@ -50,4 +50,15 @@ impl Transformation2d for Transform {
     fn support_direction(&self, dir: Vec2) -> Vec2 {
         (self.scale * (self.rotation.inverse() * dir.extend(0.0))).truncate()
     }
+
+    /// `None` unless it rotates only about the z axis, so that it keeps the plane `z = 0`.
+    fn rotation_and_scale(&self) -> Option<(Rotor2d, Vec2)> {
+        let about_z = self.rotation.x == 0.0 && self.rotation.y == 0.0;
+        about_z.then(|| {
+            (
+                Rotor2d::from_quaternion(self.rotation),
+                self.scale.truncate(),
+            )
+        })
+    }
 }

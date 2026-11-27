@@ -50,6 +50,10 @@ impl Shape for Ball {
     fn area(&self) -> f32 {
         std::f32::consts::PI * self.radius * self.radius
     }
+
+    fn primitive(&self) -> super::Primitive<'_> {
+        super::Primitive::Ball(self)
+    }
 }
 
 impl Support for Ball {
