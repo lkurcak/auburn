@@ -43,7 +43,7 @@
 
 ## Done
 
-- 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#PR)
+- 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#23)
 - 3D EPA orients faces by their winding and keeps its polytope closed, so balls get their depth (#21)
 - `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)
 - GJK and EPA tolerances scale with the shapes (#18)
