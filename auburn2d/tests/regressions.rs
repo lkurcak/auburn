@@ -1,8 +1,8 @@
 //! Minimal reproducers for known bugs, grouped by the backlog item that fixes them.
 //!
 //! Each `#[ignore]` reason names the item's `BACKLOG.md` details file. The item un-ignores its
-//! tests when it lands. The randomized suite (`tests/randomized`) covers the same bugs more
-//! broadly.
+//! tests when it lands and moves them under "Fixed bugs". The randomized suite
+//! (`tests/randomized`) covers the same bugs more broadly.
 
 use auburn2d::prelude::*;
 use auburn2d::transformation::Transformation2d;

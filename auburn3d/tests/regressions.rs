@@ -1,8 +1,8 @@
 //! Minimal reproducers for known bugs, grouped by the backlog item that fixes them.
 //!
 //! Each `#[ignore]` reason names the item's `BACKLOG.md` details file. The item un-ignores its
-//! tests when it lands. The randomized suite (`tests/randomized`) covers the same bugs more
-//! broadly.
+//! tests when it lands and moves them under "Fixed bugs". The randomized suite
+//! (`tests/randomized`) covers the same bugs more broadly.
 
 use auburn3d::prelude::*;
 
@@ -15,21 +15,6 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 }
 
 const X5: Vec3 = Vec3::new(5.0, 0.0, 0.0);
-
-// backlog/toiae-swap-3d.md
-
-#[test]
-#[ignore = "backlog/toiae-swap-3d.md"]
-fn reversed_toiae_keeps_entry_first() {
-    let z = Vec3::ZERO;
-    let ball = Ball::new(1.0);
-    let r = Point.at(&z).toiae(&ball.at(&X5), Vec3::X);
-    assert!(near_span(r, (4.0, 6.0)), "point-ball {r:?}");
-    let r = ball.at(&z).toiae(&ball.at(&X5), Vec3::X);
-    assert!(near_span(r, (3.0, 7.0)), "ball-ball {r:?}");
-    let r = Box3d::cube(1.0).at(&z).toiae(&ball.at(&X5), X5);
-    assert!(near_span(r, (0.6, 1.4)), "box-ball {r:?}");
-}
 
 // backlog/gjk-tolerances.md
 
@@ -179,6 +164,30 @@ fn box_cast_does_not_stall() {
     let vel = Vec3::new(-8.827_759, 8.827_759, -8.827_759);
     let r = ba.at(&a).toi(&bb.at(&b), vel);
     assert!(near(r, 0.0685), "{r:?}");
+}
+
+#[test]
+#[ignore = "backlog/generic-shape-cast.md"]
+fn box_ball_toiae() {
+    let r = Box3d::cube(1.0)
+        .at(&Vec3::ZERO)
+        .toiae(&Ball::new(1.0).at(&X5), X5);
+    assert!(near_span(r, (0.6, 1.4)), "{r:?}");
+}
+
+// Fixed bugs.
+
+/// The reversed 3D casts swapped entry and exit.
+#[test]
+fn reversed_toiae_keeps_entry_first() {
+    let z = Vec3::ZERO;
+    let ball = Ball::new(1.0);
+    let r = Point.at(&z).toiae(&ball.at(&X5), Vec3::X);
+    assert!(near_span(r, (4.0, 6.0)), "point-ball {r:?}");
+    let r = Point.at(&z).tttoiae(&ball.at(&X5), Vec3::X);
+    assert!(near_span(r, (4.0, 6.0)), "point-ball time-traveling {r:?}");
+    let r = ball.at(&z).toiae(&ball.at(&X5), Vec3::X);
+    assert!(near_span(r, (3.0, 7.0)), "ball-ball {r:?}");
 }
 
 // Degenerate shapes that work today.

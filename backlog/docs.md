@@ -1,7 +1,6 @@
 # Docs
 
 - README usage examples, at the root and per crate.
-- Fix the CI badge: it points at a nonexistent `rust.yml`; the workflow is `ci.yml`.
 - Document the 95 (2D) and 79 (3D) undocumented public items and add `#![warn(missing_docs)]`.
 - Positioning, proposed but not yet confirmed by the user: collision queries for
   kinematic/arcade games. Lighter than parry, and no simulation, unlike avian or rapier.
