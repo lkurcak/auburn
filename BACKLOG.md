@@ -2,7 +2,7 @@
 
 ## Now
 
-1. [3D EPA returns zero or wrong vectors](backlog/epa-3d.md)
+1. [3D GJK cycles and misses shallow overlaps](backlog/gjk-3d-cycling.md)
 1. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
 1. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
 1. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
@@ -34,6 +34,7 @@
 
 ## Done
 
+- 3D EPA orients faces by their winding and keeps its polytope closed, so balls get their depth (#21)
 - `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)
 - GJK and EPA tolerances scale with the shapes (#18)
 - Reversed 3D `toiae`/`tttoiae` keep entry before exit (#17)

@@ -16,65 +16,20 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 
 const X5: Vec3 = Vec3::new(5.0, 0.0, 0.0);
 
-// backlog/epa-3d.md
+// backlog/gjk-3d-cycling.md
 
 #[test]
-#[ignore = "backlog/epa-3d.md"]
-fn ball_point_penetration_depth() {
+#[ignore = "backlog/gjk-3d-cycling.md"]
+fn ball_box_shallow_overlap() {
+    let ball = Ball::new(1.831_465_7);
+    let cube = Box3d::new(Vec3::new(1.752_178_4, 1.970_524_4, 1.287_569_6));
     let (a, b) = (
-        Vec3::new(2.008_430_5, 1.023_615_4, -2.408_577_4),
-        Vec3::new(2.746_634_5, 0.946_395_9, -2.165_105_3),
+        Vec3::new(-0.940_023_4, -0.721_455_6, 1.826_620_1),
+        Vec3::new(1.542_484_3, 1.137_287_1, -1.097_314_2),
     );
-    let p = Ball::new(1.804_701_3).at(&a).penetrates(&Point.at(&b));
-    assert!(
-        p.is_some_and(|p| (p.length() - 1.02356).abs() < 1e-2),
-        "{p:?}"
-    );
-}
-
-#[test]
-#[ignore = "backlog/epa-3d.md"]
-fn box_box_penetration_depth() {
-    let (a, b) = (
-        Vec3::new(-0.052_579_165, 2.863_538_7, 2.765_394_7),
-        Vec3::new(-0.422_937_87, 2.543_839_5, 1.649_674_9),
-    );
-    let ba = Box3d::new(Vec3::new(1.278_554_9, 1.694_450_7, 0.182_445_94));
-    let bb = Box3d::new(Vec3::new(0.850_196_7, 0.184_416_8, 1.903_317_3));
-    let p = bb.at(&b).penetrates(&ba.at(&a));
-    assert!(
-        p.is_some_and(|p| (p.length() - 0.97004).abs() < 1e-2),
-        "{p:?}"
-    );
-}
-
-#[test]
-#[ignore = "backlog/epa-3d.md"]
-fn ball_ball_penetration() {
-    let (a, b) = (
-        Vec3::new(-1.640_698_3, -0.115_837_81, 2.472_049_7),
-        Vec3::new(-2.496_988_8, -1.151_876_4, 0.250_179_77),
-    );
-    let p = Ball::new(1.301_190_9)
-        .at(&a)
-        .penetrates(&Ball::new(1.995_153_3).at(&b));
-    assert!(
-        p.is_some_and(|p| (p.length() - 0.69955).abs() < 1e-2),
-        "{p:?}"
-    );
-    let z = Vec3::ZERO;
-    let p = Ball::new(1.0)
-        .at(&z)
-        .penetrates(&Ball::new(1.0).at(&Vec3::X));
-    assert!(
-        p.is_some_and(|p| (p - Vec3::NEG_X).length() < 1e-2),
-        "{p:?}"
-    );
-    let p = Ball::new(1.0).at(&z).penetrates(&Ball::new(2.0).at(&z));
-    assert!(
-        p.is_some_and(|p| (p.length() - 3.0).abs() < 2e-2),
-        "concentric {p:?}"
-    );
+    // About 0.0395 deep.
+    assert!(ball.at(&a).collides(&cube.at(&b)));
+    assert!(cube.at(&b).collides(&ball.at(&a)));
 }
 
 // backlog/cast-edge-cases.md
@@ -161,6 +116,66 @@ fn box_ball_toiae() {
 }
 
 // Fixed bugs.
+
+/// EPA oriented faces by which side of them the origin was on, so a face through the origin
+/// pointed inwards and the polytope folded onto itself.
+#[test]
+fn ball_point_penetration_depth() {
+    let (a, b) = (
+        Vec3::new(2.008_430_5, 1.023_615_4, -2.408_577_4),
+        Vec3::new(2.746_634_5, 0.946_395_9, -2.165_105_3),
+    );
+    let p = Ball::new(1.804_701_3).at(&a).penetrates(&Point.at(&b));
+    assert!(
+        p.is_some_and(|p| (p.length() - 1.02356).abs() < 1e-2),
+        "{p:?}"
+    );
+}
+
+#[test]
+fn box_box_penetration_depth() {
+    let (a, b) = (
+        Vec3::new(-0.052_579_165, 2.863_538_7, 2.765_394_7),
+        Vec3::new(-0.422_937_87, 2.543_839_5, 1.649_674_9),
+    );
+    let ba = Box3d::new(Vec3::new(1.278_554_9, 1.694_450_7, 0.182_445_94));
+    let bb = Box3d::new(Vec3::new(0.850_196_7, 0.184_416_8, 1.903_317_3));
+    let p = bb.at(&b).penetrates(&ba.at(&a));
+    assert!(
+        p.is_some_and(|p| (p.length() - 0.97004).abs() < 1e-2),
+        "{p:?}"
+    );
+}
+
+/// Round shapes need more EPA iterations than boxes. Where it stops short, the answer is the
+/// shortest boundary vector it found, so concentric balls get their full depth.
+#[test]
+fn ball_ball_penetration() {
+    let (a, b) = (
+        Vec3::new(-1.640_698_3, -0.115_837_81, 2.472_049_7),
+        Vec3::new(-2.496_988_8, -1.151_876_4, 0.250_179_77),
+    );
+    let p = Ball::new(1.301_190_9)
+        .at(&a)
+        .penetrates(&Ball::new(1.995_153_3).at(&b));
+    assert!(
+        p.is_some_and(|p| (p.length() - 0.69955).abs() < 1e-2),
+        "{p:?}"
+    );
+    let z = Vec3::ZERO;
+    let p = Ball::new(1.0)
+        .at(&z)
+        .penetrates(&Ball::new(1.0).at(&Vec3::X));
+    assert!(
+        p.is_some_and(|p| (p - Vec3::NEG_X).length() < 1e-2),
+        "{p:?}"
+    );
+    let p = Ball::new(1.0).at(&z).penetrates(&Ball::new(2.0).at(&z));
+    assert!(
+        p.is_some_and(|p| (p.length() - 3.0).abs() < 2e-2),
+        "concentric {p:?}"
+    );
+}
 
 #[test]
 /// GJK exited early on an absolute `first_point.length_squared() < 1e-10`.
