@@ -1,0 +1,81 @@
+name: Pages
+
+# Builds the playground for the browser and publishes it on GitHub Pages, at
+# https://lkurcak.github.io/auburn/. forge's shared workflows build no web
+# pages, so this one is auburn's own (forge-config lists it in own_workflows).
+#
+# Pull requests build it too, without publishing: CI compiles the playground
+# for the desktop only, so this is where its browser half (web.rs) gets built.
+# Only changes to what the page is built from run it.
+
+on:
+  pull_request:
+    paths:
+      - "auburn2d/**"
+      - "playground/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/pages.yml"
+  push:
+    branches: [main]
+    paths:
+      - "auburn2d/**"
+      - "playground/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publish at a time, and none cancelled halfway.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  TRUNK_VERSION: v0.22.2
+  TRUNK_SHA256: 26fca8a9952e46cd7d8b8b9a2e2c1786c090fc14b8e10b6678ab4d0f9f1a385f
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      # trunk's release binary, checked against the checksum above: no
+      # action installs it that the repo's allowed actions include.
+      - name: Install trunk
+        run: |
+          archive=trunk-x86_64-unknown-linux-gnu.tar.gz
+          curl -fsSL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/trunk-rs/trunk/releases/download/$TRUNK_VERSION/$archive"
+          echo "$TRUNK_SHA256  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      # The page lives under /auburn/, and trunk's links are absolute.
+      - name: Build
+        working-directory: playground
+        run: trunk build --release --public-url /auburn/
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: playground/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5

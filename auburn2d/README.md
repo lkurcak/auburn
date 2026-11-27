@@ -6,7 +6,8 @@
 
 Fast and simple 2D collision detection and physics.
 
-Part of the [`auburn`](https://github.com/lkurcak/auburn) workspace.
+Part of the [`auburn`](https://github.com/lkurcak/auburn) workspace. Try its queries in your
+browser, in the [playground](https://lkurcak.github.io/auburn/).
 
 ## License
 

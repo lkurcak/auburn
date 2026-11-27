@@ -5,6 +5,9 @@
 
 A Cargo workspace for fast and simple collision detection and physics.
 
+**[Try auburn2d's queries in your browser](https://lkurcak.github.io/auburn/)**: drag shapes
+around and see what each query answers.
+
 ## Crates
 
 - [`auburn2d`](./auburn2d) — 2D collision detection and physics

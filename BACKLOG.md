@@ -2,9 +2,6 @@
 
 ## Now
 
-1. Publish the playground on GitHub Pages and link it from the README. Its `pages.yml` has to
-   be listed in auburn's `own_workflows` in forge-config, and Pages set to deploy from Actions.
-
 ## Later
 
 - Cast result with time, hit normal and contact point. `CastResult` is commented out in `relation/cast.rs`; sliding along walls needs the normal.
@@ -42,6 +39,7 @@
 
 ## Done
 
+- Playground online at <https://lkurcak.github.io/auburn/>, linked from the READMEs: `pages.yml` builds it for the browser on pull requests and publishes it from main (#PR)
 - Playground (`cargo run -p auburn-playground`, or `trunk serve` in `playground/`): drag a point, a ball, a box and a polygon, see each query's answers and ghosts, copy a pair as a test, and keep the scene in the page's URL (#34)
 - Released 0.4.0 on crates.io: auburn2d and auburn3d, with every fix and the any-two-colliders casts since 0.3.3 (#33)
 - Any two colliders cast, whatever their shapes and transformations, mixed ones too: one generic impl per cast, with exact formulas for points, balls, boxes and polygons (in 3D: points, balls, and points against boxes) and the GJK ray cast for the rest; `Shape::primitive` and `rotation_and_scale` tell when a shape keeps its form; the ~70 hand-written per-pair impls are gone (#32)
@@ -51,4 +49,3 @@
 - `From<ScaleTranslate2d> for bevy Isometry2d` is gone: its body was `todo!()`, so it could only panic (#28)
 - `Poly2d` casts are one swept SAT that ignores winding and has no absolute tolerances, so tiny and clockwise polygons work; `regular` is counter-clockwise, `area` works, an empty polygon is a point at its origin, and debug builds check convexity (#27)
 - Ball and point casts read off one overlap span: no NaN at rest, negative time-traveling times in 3D, tiny velocities, Point–Point through-paths; the at-rest answers are documented and every pair gives them (#26)
-- `Transform2d` ball casts scale each radius once, by its own |scale|, and ball `toiae` gives the exit when starting inside; box casts take |scale| too (#25)
