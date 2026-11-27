@@ -165,98 +165,66 @@ mod penetrates {
     static_test!(
         vec2: penetrates @ Vec2, Config::BASE,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d, Box2d-Poly2d,
-            Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        vec2_epa: penetrates @ Vec2, Config::BASE,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         pos2d: penetrates @ Pos2d, Config::BASE,
         [
-            Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d,
-            Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        pos2d_epa: penetrates @ Pos2d, Config::BASE,
-        [Point-Ball, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         scale_translate2d: penetrates @ ScaleTranslate2d, Config::BASE,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d, Box2d-Poly2d,
-            Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        scale_translate2d_epa: penetrates @ ScaleTranslate2d, Config::BASE,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         scale_translate2d_mirrored: penetrates @ ScaleTranslate2d, Config::MIRRORED,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d, Box2d-Poly2d,
-            Box2d-Shape2d, Poly2d-Poly2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        scale_translate2d_mirrored_epa: penetrates @ ScaleTranslate2d, Config::MIRRORED,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Poly2d-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         transform2d: penetrates @ Transform2d, Config::BASE,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d, Box2d-Poly2d,
-            Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d, Shape2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        transform2d_epa: penetrates @ Transform2d, Config::BASE,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d]
     );
     static_test!(
         transform2d_mirrored: penetrates @ Transform2d, Config::MIRRORED,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d, Box2d-Poly2d,
-            Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        transform2d_mirrored_epa: penetrates @ Transform2d, Config::MIRRORED,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         transform2d_tiny: penetrates @ Transform2d, Config::TINY,
         [
-            Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d,
-            Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        transform2d_tiny_epa: penetrates @ Transform2d, Config::TINY,
-        [Point-Ball, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         transform2d_huge: penetrates @ Transform2d, Config::HUGE,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d, Box2d-Poly2d,
-            Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/epa-2d.md"]
-        transform2d_huge_epa: penetrates @ Transform2d, Config::HUGE,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         vec2_far: penetrates @ Vec2, Config::FAR,
@@ -270,15 +238,10 @@ mod penetrates {
         #[cfg(feature = "bevy")]
         bevy_transform: penetrates @ bevy::prelude::Transform, Config::BASE,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d, Box2d-Poly2d,
-            Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[cfg(feature = "bevy")]
-        #[ignore = "backlog/epa-2d.md"]
-        bevy_transform_epa: penetrates @ bevy::prelude::Transform, Config::BASE,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
 }
 

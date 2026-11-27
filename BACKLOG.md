@@ -2,7 +2,6 @@
 
 ## Now
 
-1. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
 1. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
 1. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
 1. [`Poly2d` robustness: winding, epsilons, `area`, empty polygons](backlog/poly2d-robustness.md)
@@ -43,6 +42,7 @@
 
 ## Done
 
+- 2D EPA returns the shortest support distance it finds, so deep, near-concentric balls get their depth and direction (#24)
 - 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#23)
 - 3D EPA orients faces by their winding and keeps its polytope closed, so balls get their depth (#21)
 - `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)

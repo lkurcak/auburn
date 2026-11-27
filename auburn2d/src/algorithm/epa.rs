@@ -1,33 +1,56 @@
+//! Expanding Polytope Algorithm (EPA) for penetration depth calculation.
+//!
+//! It extends GJK: starting from GJK's triangle around the origin, it grows a convex polygon
+//! inside the Minkowski difference towards the origin's nearest boundary.
 use super::gjk::Simplex;
-/// Expanding Polytope Algorithm (EPA) for penetration depth calculation.
-/// This algorithm extends GJK to find the penetration depth and direction when shapes overlap.
 use crate::Vec2;
 
-const EPA_MAX_ITERATIONS: usize = 30;
-/// EPA stops once a support point gets no further than this fraction of the polytope's size
-/// past the closest edge. Being relative, it works the same for tiny and huge shapes.
+const EPA_MAX_ITERATIONS: usize = 64;
+/// EPA stops once the penetration it has found is no more than this fraction of the
+/// polytope's size longer than the closest edge. Being relative, it works the same for tiny
+/// and huge shapes.
 const EPA_RELATIVE_TOLERANCE: f32 = 1e-5;
 /// Far from the origin, rounding in the support points' world coordinates outweighs that, so
 /// EPA also stops at this many units of f32 precision of those coordinates.
 const EPA_ROUNDING_TOLERANCE: f32 = 4.0 * f32::EPSILON;
 
-/// Represents an edge of the polytope with its distance and normal
+/// An edge of the polytope, from its vertex of the same index to the next one.
 #[derive(Debug, Clone, Copy)]
 struct Edge {
-    distance: f32,
+    /// The unit normal, pointing out of the polytope.
     normal: Vec2,
-    index: usize,
+    /// How far the edge's line is from the origin, negative if the origin is outside it.
+    /// Infinite for an edge too short to have a direction, so it is never the closest.
+    distance: f32,
+}
+
+impl Edge {
+    fn new(from: Vec2, to: Vec2) -> Self {
+        let edge = to - from;
+        // The polytope is counter-clockwise, so its outside is on the edge's right.
+        let normal = Vec2::new(edge.y, -edge.x);
+        let length = normal.length();
+        if length > 0.0 {
+            let normal = normal / length;
+            Self {
+                normal,
+                distance: normal.dot(from),
+            }
+        } else {
+            Self {
+                normal: Vec2::ZERO,
+                distance: f32::INFINITY,
+            }
+        }
+    }
 }
 
 /// Run the EPA algorithm to find penetration depth and direction.
 ///
-/// # Arguments
-/// * `simplex` - Initial simplex from GJK (must contain the origin)
-/// * `support_a` - Support function for shape A
-/// * `support_b` - Support function for shape B
-///
-/// # Returns
-/// * Penetration vector (direction and magnitude to separate the shapes)
+/// `initial_simplex` is the triangle GJK found around the origin. The result is a direction
+/// times how far the Minkowski difference reaches along it, so moving the shapes apart by it
+/// leaves them touching. When EPA doesn't converge it is the shortest such vector found so
+/// far: slightly longer than the penetration depth, but not shorter.
 pub fn epa<F1, F2>(initial_simplex: Simplex, support_a: F1, support_b: F2) -> Vec2
 where
     F1: Fn(Vec2) -> Vec2,
@@ -39,105 +62,72 @@ where
         (a - b, a.abs().max(b.abs()).max_element())
     };
 
-    // Convert simplex to polytope (list of vertices)
-    let mut polytope: Vec<Vec2> = Vec::new();
-    for i in 0..initial_simplex.count() {
-        polytope.push(initial_simplex.get(i));
+    // GJK only returns fewer points when its first one is the origin: the shapes touch.
+    if initial_simplex.count() < 3 {
+        return Vec2::ZERO;
     }
+    let mut vertices: Vec<Vec2> = (0..3).map(|i| initial_simplex.get(i)).collect();
 
-    // Ensure the polytope is wound counter-clockwise
-    if polytope.len() == 3 {
-        let v0 = polytope[1] - polytope[0];
-        let v1 = polytope[2] - polytope[0];
-        let cross = v0.x * v1.y - v0.y * v1.x;
-        if cross < 0.0 {
-            polytope.swap(1, 2);
-        }
+    // Wind the triangle counter-clockwise, judging by its corners.
+    let [p0, p1, p2] = [vertices[0], vertices[1], vertices[2]];
+    let orientation = (p1 - p0).perp_dot(p2 - p0);
+    if orientation == 0.0 || orientation.is_nan() {
+        // Flat. GJK finds the last corner past the origin, off the others' line, unless the
+        // origin is on the Minkowski difference's boundary: the shapes touch.
+        return Vec2::ZERO;
     }
+    if orientation < 0.0 {
+        vertices.swap(1, 2);
+    }
+    let mut edges: Vec<Edge> = (0..3)
+        .map(|i| Edge::new(vertices[i], vertices[(i + 1) % 3]))
+        .collect();
 
     // Every vertex is on the Minkowski difference's boundary, so the farthest one bounds the
     // penetration depth from above.
-    let size = polytope.iter().map(|v| v.length()).fold(0.0, f32::max);
+    let size = vertices.iter().map(|v| v.length()).fold(0.0, f32::max);
     let relative_tolerance = EPA_RELATIVE_TOLERANCE * size;
 
+    // The closest edge's distance is a lower bound on the penetration depth, and the support
+    // point in its direction an upper one. EPA stops when they meet.
+    let mut best = Vec2::ZERO;
+    let mut best_depth = f32::INFINITY;
+
     for _ in 0..EPA_MAX_ITERATIONS {
-        // Find the closest edge to the origin
-        let edge = find_closest_edge(&polytope);
+        let Some(closest) = closest_edge(&edges) else {
+            break;
+        };
+        let edge = edges[closest];
 
-        // Get a new support point in the direction of the edge normal
-        let (support_point, world) = support(edge.normal);
-        let tolerance = relative_tolerance.max(EPA_ROUNDING_TOLERANCE * world);
-
-        // Check how much further we can go
-        let distance = support_point.dot(edge.normal);
-
-        // If we're not making progress, we've found the penetration depth
-        if distance - edge.distance <= tolerance {
-            // Return the penetration vector
-            // Note: This points from A to B (direction to push B away from A)
-            return edge.normal * distance;
+        let (point, world) = support(edge.normal);
+        let depth = point.dot(edge.normal);
+        if depth < best_depth {
+            best_depth = depth;
+            best = edge.normal * depth;
         }
 
-        // Insert the new point into the polytope
-        polytope.insert(edge.index, support_point);
+        if best_depth - edge.distance <= relative_tolerance.max(EPA_ROUNDING_TOLERANCE * world) {
+            break;
+        }
+
+        // Split the edge at the new point.
+        let next = (closest + 1) % vertices.len();
+        let (from, to) = (vertices[closest], vertices[next]);
+        vertices.insert(closest + 1, point);
+        edges[closest] = Edge::new(from, point);
+        edges.insert(closest + 1, Edge::new(point, to));
     }
 
-    // If we didn't converge, return the best edge we found
-    let edge = find_closest_edge(&polytope);
-    edge.normal * edge.distance
+    best
 }
 
-/// Find the edge of the polytope closest to the origin
-fn find_closest_edge(polytope: &[Vec2]) -> Edge {
-    let mut closest_edge = Edge {
-        distance: f32::MAX,
-        normal: Vec2::ZERO,
-        index: 0,
-    };
-
-    for i in 0..polytope.len() {
-        let j = (i + 1) % polytope.len();
-
-        let a = polytope[i];
-        let b = polytope[j];
-
-        let edge = b - a;
-
-        // Normal perpendicular to the edge (pointing outward)
-        let mut normal = Vec2::new(edge.y, -edge.x);
-        let length = normal.length();
-        if length > 0.0 {
-            normal /= length;
-        } else {
-            // Duplicate vertices.
-            continue;
-        }
-
-        // Calculate distance from origin to this edge
-        let distance = normal.dot(a);
-
-        // Make sure normal points toward origin
-        if distance < 0.0 {
-            normal = -normal;
-            let distance = -distance;
-
-            if distance < closest_edge.distance {
-                closest_edge = Edge {
-                    distance,
-                    normal,
-                    index: j,
-                };
-            }
-        } else if distance < closest_edge.distance {
-            closest_edge = Edge {
-                distance,
-                normal,
-                index: j,
-            };
-        }
-    }
-
-    closest_edge
+/// The index of the edge closest to the origin, if any edge has a direction.
+fn closest_edge(edges: &[Edge]) -> Option<usize> {
+    let (index, edge) = edges
+        .iter()
+        .enumerate()
+        .min_by(|(_, a), (_, b)| a.distance.total_cmp(&b.distance))?;
+    edge.distance.is_finite().then_some(index)
 }
 
 #[cfg(test)]
