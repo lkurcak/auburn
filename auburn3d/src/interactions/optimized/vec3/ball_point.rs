@@ -57,7 +57,7 @@ impl TimeOfImpact<Collider<'_, Ball, Vec3>> for Collider<'_, Point, Vec3> {
 
 impl TimeOfImpactAndExit<Collider<'_, Ball, Vec3>> for Collider<'_, Point, Vec3> {
     fn toiae(&self, other: &Collider<'_, Ball, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        other.toiae(self, -vel).map(|(exit, entry)| (entry, exit))
+        other.toiae(self, -vel)
     }
 }
 
@@ -69,7 +69,7 @@ impl TimeTravelingTimeOfImpact<Collider<'_, Ball, Vec3>> for Collider<'_, Point,
 
 impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Ball, Vec3>> for Collider<'_, Point, Vec3> {
     fn tttoiae(&self, other: &Collider<'_, Ball, Vec3>, vel: Vec3) -> Option<(f32, f32)> {
-        other.tttoiae(self, -vel).map(|(exit, entry)| (entry, exit))
+        other.tttoiae(self, -vel)
     }
 }
 

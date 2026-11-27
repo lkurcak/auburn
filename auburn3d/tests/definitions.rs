@@ -94,7 +94,6 @@ fn ball_ball_definitions() {
 }
 
 #[test]
-#[ignore = "backlog/toiae-swap-3d.md"]
 fn ball_ball_toiae() {
     let (ball1, ball2) = (Ball::new(1.0), Ball::new(2.0));
     assert_span(ball1.at(&A).toiae(&ball2.at(&B), Vec3::X), Some((1.0, 3.0)));
@@ -121,7 +120,7 @@ fn ball_box_penetrates() {
 }
 
 #[test]
-#[ignore = "backlog/toiae-swap-3d.md, backlog/generic-shape-cast.md"]
+#[ignore = "backlog/generic-shape-cast.md"]
 fn ball_box_toiae() {
     let (ball, cube) = (Ball::new(1.0), Box3d::cube(2.0));
     let (a, b) = (ball.at(&A), cube.at(&B));
