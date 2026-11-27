@@ -29,6 +29,10 @@ impl Transformation2d for Pos2d {
     fn compose(&self, other: &Self) -> Self {
         Self(self.0.compose(&other.0))
     }
+
+    fn support_direction(&self, dir: Vec2) -> Vec2 {
+        dir
+    }
 }
 
 impl Mul<Pos2d> for Pos2d {

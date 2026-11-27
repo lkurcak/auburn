@@ -63,6 +63,10 @@ impl Transformation2d for ScaleTranslate2d {
             scale: self.scale * other.scale,
         }
     }
+
+    fn support_direction(&self, dir: Vec2) -> Vec2 {
+        dir * self.scale
+    }
 }
 
 impl Mul<ScaleTranslate2d> for ScaleTranslate2d {

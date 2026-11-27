@@ -6,7 +6,6 @@
 
 use auburn2d::prelude::*;
 use auburn2d::transformation::Transformation2d;
-use std::sync::Arc;
 
 fn near(got: Option<f32>, want: f32) -> bool {
     got.is_some_and(|t| (t - want).abs() < 1e-3)
@@ -300,7 +299,50 @@ fn far_from_origin_ball_contains_point() {
     assert!(ball.at(&c).penetrates(&Point.at(&p)).is_some());
 }
 
-// backlog/bevy-uneven-scale.md
+/// `Collider::support` mapped directions through the inverse transformation, adding and then
+/// subtracting its translation, so far from the origin short directions came out as zero.
+#[test]
+fn far_from_origin_support_keeps_short_directions() {
+    use auburn2d::transformation::pos2d::Pos2d;
+    let c = Vec2::new(1e4, -1e4);
+    let ball = Ball::new(1.0);
+    for len in [1e-4f32, 1e-8] {
+        let d = Vec2::X * len;
+        let want = c + Vec2::X;
+        let got = [
+            ball.at(&c).support(d),
+            ball.at(&Pos2d(c)).support(d),
+            ball.at(&ScaleTranslate2d::from_translation(c)).support(d),
+            ball.at(&Transform2d::from_translation(c)).support(d),
+        ];
+        for (i, s) in got.into_iter().enumerate() {
+            assert!((s - want).length() < 1e-2, "{len}, {i}: {s}");
+        }
+    }
+
+    // Turned and scaled by 2.
+    let t = Transform2d::from_translation(c)
+        .with_angle(0.3)
+        .with_scale(2.0);
+    for i in 0..8 {
+        let d = Rotor2d::radians(i as f32 * 0.8) * Vec2::X * 1e-4;
+        let s = ball.at(&t).support(d);
+        let want = c + 2.0 * d.normalize();
+        assert!((s - want).length() < 1e-2, "ball {i}: {s}, want {want}");
+        let corners = [
+            Vec2::ONE,
+            Vec2::new(1.0, -1.0),
+            Vec2::NEG_ONE,
+            Vec2::new(-1.0, 1.0),
+        ];
+        let corner = corners
+            .into_iter()
+            .max_by(|a, b| (t.rot * *a).dot(d).total_cmp(&(t.rot * *b).dot(d)))
+            .unwrap();
+        let (s, want) = (Box2d::square(1.0).at(&t).support(d), t.apply(corner));
+        assert!((s - want).length() < 1e-2, "square {i}: {s}, want {want}");
+    }
+}
 
 /// A user-defined transformation with uneven scale, which `Transformation2d` allows.
 #[derive(Debug, Clone, Copy)]
@@ -328,10 +370,14 @@ impl Transformation2d for Stretch {
             s: self.s * o.s,
         }
     }
+    fn support_direction(&self, dir: Vec2) -> Vec2 {
+        dir * self.s
+    }
 }
 
+/// `Collider::support` went through `inverse`, which is right only for uniform scale. Such
+/// types now implement `Transformation2d::support_direction`.
 #[test]
-#[ignore = "backlog/bevy-uneven-scale.md"]
 fn uneven_scale_support() {
     // Ball(1) stretched to an ellipse with semi-axes 1 and 4. Its support along (1, 1) is
     // the point maximising x + y.
@@ -344,10 +390,13 @@ fn uneven_scale_support() {
     assert!((s - want).length() < 1e-4, "{s:?}, want {want:?}");
 }
 
+// backlog/bevy-uneven-scale.md
+
 #[cfg(feature = "bevy")]
 mod bevy_transform {
     use super::*;
     use bevy::prelude::{Transform, Vec3};
+    use std::sync::Arc;
 
     #[test]
     #[ignore = "backlog/bevy-uneven-scale.md"]

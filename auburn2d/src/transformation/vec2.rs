@@ -19,6 +19,10 @@ impl Transformation2d for Vec2 {
         // So (a ∘ b)(x) = a(b(x)) = a + (b + x) = b + a + x
         other + *self
     }
+
+    fn support_direction(&self, dir: Vec2) -> Vec2 {
+        dir
+    }
 }
 
 #[cfg(test)]

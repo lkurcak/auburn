@@ -19,4 +19,8 @@ impl Transformation3d for Vec3 {
     fn compose(&self, other: &Self) -> Self {
         self + other
     }
+
+    fn support_direction(&self, dir: Vec3) -> Vec3 {
+        dir
+    }
 }

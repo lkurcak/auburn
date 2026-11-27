@@ -2,7 +2,6 @@
 
 ## Now
 
-1. [`Collider::support` loses precision far from the origin](backlog/support-direction.md)
 1. [3D EPA returns zero or wrong vectors](backlog/epa-3d.md)
 1. [2D EPA points the wrong way on deep, near-concentric overlaps](backlog/epa-2d.md)
 1. [`Transform2d` casts mishandle scale](backlog/transform2d-scale.md)
@@ -12,7 +11,7 @@
 1. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
 1. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
 1. [Cast coverage through the generic cast](backlog/cast-coverage.md)
-1. Owner: say whether to release 0.4.0
+1. Release 0.4.0.
 
 ## Later
 
@@ -35,6 +34,7 @@
 
 ## Done
 
+- `Collider::support` maps directions through the transpose, exact far from the origin; GJK finds points on flat boxes (#20)
 - GJK and EPA tolerances scale with the shapes (#18)
 - Reversed 3D `toiae`/`tttoiae` keep entry before exit (#17)
 - Randomized suites against an exact ground truth, failing checks ignored by backlog item (#16)

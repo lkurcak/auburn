@@ -35,6 +35,10 @@ impl Transformation3d for ScaleTranslate3d {
             scale: self.scale * other.scale,
         }
     }
+
+    fn support_direction(&self, dir: Vec3) -> Vec3 {
+        dir * self.scale
+    }
 }
 
 impl Default for ScaleTranslate3d {

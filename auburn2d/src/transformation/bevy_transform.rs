@@ -47,4 +47,8 @@ impl Transformation2d for bevy::prelude::Transform {
             scale: crate::Vec3::splat(composed.scale),
         }
     }
+
+    fn support_direction(&self, dir: Vec2) -> Vec2 {
+        Into::<Transform2d>::into(*self).support_direction(dir)
+    }
 }

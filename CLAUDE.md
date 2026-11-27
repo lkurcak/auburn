@@ -34,3 +34,8 @@ default branch, so it has to be true there.
 - The randomized suites draw the same cases on every run. Check them at 20 times the cases
   before un-ignoring anything:
   `AUBURN_RANDOMIZED_SCALE=20 cargo test --release --all-features -- --ignored`.
+
+## Decisions
+
+- Releases are up to the agent (owner, 27 Nov 2026). Merging a version bump releases it
+  (`.github/workflows/release.yml`), so a bump goes in a pull request of its own.

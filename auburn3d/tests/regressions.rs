@@ -254,25 +254,83 @@ fn reversed_toiae_keeps_entry_first() {
     assert!(near_span(r, (3.0, 7.0)), "ball-ball {r:?}");
 }
 
-// Degenerate shapes that work today.
-
+/// `Collider::support` mapped directions through the inverse transformation, adding and then
+/// subtracting its translation, so far from the origin short directions came out as zero.
 #[test]
-fn flat_boxes() {
-    let z = Vec3::ZERO;
-    let flat = Box3d::new(Vec3::new(1.0, 1.0, 0.0));
-    assert!(flat.at(&z).collides(&flat.at(&Vec3::new(0.5, 0.5, 0.0))));
-    assert!(Point.at(&z).collides(&flat.at(&z)));
+fn far_from_origin_support_keeps_short_directions() {
+    use auburn3d::transformation::pos3d::Pos3d;
+    let c = Vec3::new(1e4, -1e4, 1e4);
+    let ball = Ball::new(1.0);
+    for len in [1e-4f32, 1e-8] {
+        let d = Vec3::X * len;
+        let want = c + Vec3::X;
+        let got = [
+            ball.at(&c).support(d),
+            ball.at(&Pos3d(c)).support(d),
+            ball.at(&ScaleTranslate3d::from_translation(c)).support(d),
+            ball.at(&Transform3d::from_translation(c)).support(d),
+        ];
+        for (i, s) in got.into_iter().enumerate() {
+            assert!((s - want).length() < 1e-2, "{len}, {i}: {s}");
+        }
+    }
+
+    // Turned and scaled by 2.
+    let axis = Vec3::new(1.0, 2.0, 3.0).normalize();
+    let t = Transform3d::from_rotation(auburn3d::Quat::from_axis_angle(axis, 0.7))
+        .with_translation(c)
+        .with_scale(2.0);
+    let dirs = [
+        Vec3::X,
+        Vec3::NEG_Y,
+        Vec3::new(1.0, 1.0, 1.0),
+        Vec3::new(-0.3, 0.8, -0.5),
+    ];
+    for (i, d) in dirs.into_iter().enumerate() {
+        let d = d.normalize() * 1e-4;
+        let s = ball.at(&t).support(d);
+        let want = c + 2.0 * d.normalize();
+        assert!((s - want).length() < 1e-2, "ball {i}: {s}, want {want}");
+        let local = t.rot.inverse() * d;
+        let corner = Vec3::ONE.copysign(local);
+        let (s, want) = (Box3d::cube(1.0).at(&t).support(d), t.apply(corner));
+        assert!((s - want).length() < 1e-2, "cube {i}: {s}, want {want}");
+    }
 }
 
-// backlog/bevy-uneven-scale.md
+/// GJK searched perpendicular to a line through the origin and, on a flat Minkowski
+/// difference, could find only points it already had, so it gave up and missed.
+#[test]
+fn points_on_flat_boxes() {
+    for (axis, half) in [
+        (0, Vec3::new(0.0, 1.0, 1.0)),
+        (1, Vec3::new(1.0, 0.0, 1.0)),
+        (2, Vec3::new(1.0, 1.0, 0.0)),
+    ] {
+        let flat = Box3d::new(half);
+        for at in [Vec3::ZERO, Vec3::new(3.0, -2.0, 5.0)] {
+            for offset in [
+                Vec3::ZERO,
+                Vec3::new(0.5, 0.5, 0.5),
+                Vec3::new(-0.25, 0.75, -0.5),
+            ] {
+                let p = at + offset * half;
+                let msg = format!("axis {axis}, at {at}, point {p}");
+                assert!(Point.at(&p).collides(&flat.at(&at)), "{msg}");
+                assert!(flat.at(&at).collides(&Point.at(&p)), "{msg}");
+            }
+        }
+    }
+}
 
+/// `Collider::support` went through `inverse`, which collapses bevy's per-axis scale to its
+/// largest, while `apply` keeps it.
 #[cfg(feature = "bevy")]
 mod bevy_transform {
     use super::*;
     use bevy::prelude::Transform;
 
     #[test]
-    #[ignore = "backlog/bevy-uneven-scale.md"]
     fn uneven_scale_ball() {
         // Ball(1) under scale (1, 4, 1): an ellipsoid. Its support along (1, 1, 0) is the
         // point maximising x + y.
@@ -287,7 +345,6 @@ mod bevy_transform {
     }
 
     #[test]
-    #[ignore = "backlog/bevy-uneven-scale.md"]
     fn mirrored_box() {
         let t = Transform::from_scale(Vec3::new(-1.0, 1.0, 1.0));
         let cube = Box3d::cube(1.0);
@@ -305,4 +362,14 @@ mod bevy_transform {
                 .collides(&Box3d::cube(1.0).at(&t))
         );
     }
+}
+
+// Degenerate shapes that work today.
+
+#[test]
+fn flat_boxes() {
+    let z = Vec3::ZERO;
+    let flat = Box3d::new(Vec3::new(1.0, 1.0, 0.0));
+    assert!(flat.at(&z).collides(&flat.at(&Vec3::new(0.5, 0.5, 0.0))));
+    assert!(Point.at(&z).collides(&flat.at(&z)));
 }

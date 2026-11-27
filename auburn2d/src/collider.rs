@@ -149,8 +149,7 @@ where
     S: Support,
 {
     fn support(&self, dir: Vec2) -> Vec2 {
-        let local_dir =
-            self.isometry.inverse().apply(dir) - self.isometry.inverse().apply_to_origin();
+        let local_dir = self.isometry.support_direction(dir);
         let local_support = self.shape.support(local_dir);
         self.isometry.apply(local_support)
     }
