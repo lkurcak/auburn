@@ -77,6 +77,10 @@ impl Shape for Box2d {
     fn area(&self) -> f32 {
         self.half_size.x * self.half_size.y * 4.0
     }
+
+    fn primitive(&self) -> super::Primitive<'_> {
+        super::Primitive::Box2d(self)
+    }
 }
 
 impl Support for Box2d {

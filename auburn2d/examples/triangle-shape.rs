@@ -68,7 +68,7 @@ impl Support for Triangle {
     }
 }
 
-// That's it! Now Triangle automatically works with collision detection!
+// That's it! Now Triangle automatically works with collision detection and casts!
 
 fn main() {
     println!("=== Auburn2D Triangle Example ===\n");
@@ -137,6 +137,16 @@ fn main() {
     } else {
         println!("❌ No collision");
     }
+
+    println!();
+
+    // Casts work too: the triangle slides right until it touches the box.
+    let start = Vec2::new(-4.0, 0.5);
+    let toi = triangle.at(&start).toi(&box_collider, Vec2::new(1.0, 0.0));
+    println!(
+        "Triangle at {:?} moving right hits the box at t = {:?}",
+        start, toi
+    );
 
     println!("\n🎉 Triangle shape works with all existing shapes automatically!");
     println!("   No N×N implementations needed - just implement Support!");

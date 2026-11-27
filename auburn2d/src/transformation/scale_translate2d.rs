@@ -1,4 +1,5 @@
 use crate::Vec2;
+use crate::rotor2d::Rotor2d;
 use std::ops::Mul;
 
 use super::Transformation2d;
@@ -53,6 +54,10 @@ impl Transformation2d for ScaleTranslate2d {
 
     fn support_direction(&self, dir: Vec2) -> Vec2 {
         dir * self.scale
+    }
+
+    fn rotation_and_scale(&self) -> Option<(Rotor2d, Vec2)> {
+        Some((Rotor2d::IDENTITY, Vec2::splat(self.scale)))
     }
 }
 

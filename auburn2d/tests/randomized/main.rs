@@ -53,25 +53,100 @@ macro_rules! query {
 }
 
 /// `cast_test!(name: Kind @ T, config, [A-B, ...])` checks the cast `Kind` on each pair, with
-/// `a` moving. `Kind at rest` checks it at zero velocity instead.
+/// `a` moving and both shapes placed by a `T`; `@ (TA, TB)` places `a` by a `TA` and `b` by a
+/// `TB`. `Kind at rest` checks it at zero velocity instead.
 macro_rules! cast_test {
-    ($(#[$attr:meta])* $name:ident: $kind:ident @ $T:ty, $cfg:expr, [$($A:ident-$B:ident),* $(,)?]) => {
+    ($(#[$attr:meta])* $name:ident: $kind:ident @ ($TA:ty, $TB:ty), $cfg:expr, [$($A:ident-$B:ident),* $(,)?]) => {
         $(#[$attr])*
         #[test]
         fn $name() {
             let mut report = Report::default();
-            $( report.push(check::cast::<$A, $B, $T>(&$cfg, cases(CAST_CASES), Kind::$kind, query!($kind))); )*
+            $( report.push(check::cast::<$A, $B, $TA, $TB>(&$cfg, cases(CAST_CASES), Kind::$kind, query!($kind))); )*
             report.finish();
         }
     };
-    ($(#[$attr:meta])* $name:ident: $kind:ident at rest @ $T:ty, $cfg:expr, [$($A:ident-$B:ident),* $(,)?]) => {
+    ($(#[$attr:meta])* $name:ident: $kind:ident at rest @ ($TA:ty, $TB:ty), $cfg:expr, [$($A:ident-$B:ident),* $(,)?]) => {
         $(#[$attr])*
         #[test]
         fn $name() {
             let mut report = Report::default();
-            $( report.push(check::cast_at_rest::<$A, $B, $T>(&$cfg, cases(CAST_CASES), Kind::$kind, query!($kind))); )*
+            $( report.push(check::cast_at_rest::<$A, $B, $TA, $TB>(&$cfg, cases(CAST_CASES), Kind::$kind, query!($kind))); )*
             report.finish();
         }
+    };
+    ($(#[$attr:meta])* $name:ident: $kind:ident @ $T:ty, $cfg:expr, $pairs:tt) => {
+        cast_test!($(#[$attr])* $name: $kind @ ($T, $T), $cfg, $pairs);
+    };
+    ($(#[$attr:meta])* $name:ident: $kind:ident at rest @ $T:ty, $cfg:expr, $pairs:tt) => {
+        cast_test!($(#[$attr])* $name: $kind at rest @ ($T, $T), $cfg, $pairs);
+    };
+}
+
+/// `every_pair!(test!(args,))` is `test!(args, [A-B, ...])` with every ordered pair of the
+/// shapes the checks sample.
+macro_rules! every_pair {
+    ($test:ident!($($args:tt)*)) => {
+        $test!($($args)* [
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Point,
+            Ball-Ball, Ball-Box2d, Ball-Poly2d, Ball-Shape2d, Box2d-Point, Box2d-Ball,
+            Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Point, Poly2d-Ball, Poly2d-Box2d,
+            Poly2d-Poly2d, Poly2d-Shape2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
+            Shape2d-Poly2d, Shape2d-Shape2d
+        ]);
+    };
+}
+
+/// The tests of the cast `Kind`: every pair, under every transformation and some mixes of them.
+macro_rules! cast_tests {
+    ($kind:ident) => {
+        every_pair!(cast_test!(vec2: $kind @ Vec2, Config::BASE,));
+        every_pair!(cast_test!(vec2_tiny: $kind @ Vec2, Config::TINY,));
+        every_pair!(cast_test!(vec2_huge: $kind @ Vec2, Config::HUGE,));
+        every_pair!(cast_test!(vec2_far: $kind @ Vec2, Config::FAR,));
+        every_pair!(cast_test!(pos2d: $kind @ Pos2d, Config::BASE,));
+        every_pair!(cast_test!(scale_translate2d: $kind @ ScaleTranslate2d, Config::BASE,));
+        every_pair!(cast_test!(
+            scale_translate2d_mirrored: $kind @ ScaleTranslate2d, Config::MIRRORED,
+        ));
+        every_pair!(cast_test!(
+            transform2d_axis_aligned: $kind @ Transform2d, Config::AXIS_ALIGNED,
+        ));
+        every_pair!(cast_test!(transform2d_rigid: $kind @ Transform2d, Config::RIGID,));
+        every_pair!(cast_test!(transform2d: $kind @ Transform2d, Config::BASE,));
+        every_pair!(cast_test!(transform2d_mirrored: $kind @ Transform2d, Config::MIRRORED,));
+        every_pair!(cast_test!(transform2d_tiny: $kind @ Transform2d, Config::TINY,));
+        every_pair!(cast_test!(transform2d_huge: $kind @ Transform2d, Config::HUGE,));
+        every_pair!(cast_test!(transform2d_far: $kind @ Transform2d, Config::FAR,));
+        every_pair!(cast_test!(
+            #[cfg(feature = "bevy")]
+            bevy_transform: $kind @ bevy::prelude::Transform, Config::BASE,
+        ));
+        every_pair!(cast_test!(
+            #[cfg(feature = "bevy")]
+            bevy_transform_mirrored: $kind @ bevy::prelude::Transform, Config::MIRRORED,
+        ));
+        every_pair!(cast_test!(vec2_and_transform2d: $kind @ (Vec2, Transform2d), Config::BASE,));
+        every_pair!(cast_test!(
+            transform2d_and_scale_translate2d: $kind @ (Transform2d, ScaleTranslate2d),
+            Config::MIRRORED,
+        ));
+        every_pair!(cast_test!(
+            scale_translate2d_and_pos2d: $kind @ (ScaleTranslate2d, Pos2d), Config::MIRRORED,
+        ));
+        every_pair!(cast_test!(
+            #[cfg(feature = "bevy")]
+            bevy_transform_and_transform2d: $kind @ (bevy::prelude::Transform, Transform2d),
+            Config::MIRRORED,
+        ));
+        every_pair!(cast_test!(vec2_at_rest: $kind at rest @ Vec2, Config::BASE,));
+        every_pair!(cast_test!(transform2d_at_rest: $kind at rest @ Transform2d, Config::RIGID,));
+        every_pair!(cast_test!(
+            vec2_and_transform2d_at_rest: $kind at rest @ (Vec2, Transform2d), Config::BASE,
+        ));
+        every_pair!(cast_test!(
+            #[cfg(feature = "bevy")]
+            bevy_transform_at_rest: $kind at rest @ bevy::prelude::Transform, Config::MIRRORED,
+        ));
     };
 }
 
@@ -265,322 +340,20 @@ mod penetrates {
 
 mod toi {
     use super::*;
-    cast_test!(
-        vec2: Toi @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        vec2_tiny: Toi @ Vec2, Config::TINY,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        vec2_huge: Toi @ Vec2, Config::HUGE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_axis_aligned: Toi @ Transform2d, Config::AXIS_ALIGNED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_rigid: Toi @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d: Toi @ Transform2d, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_mirrored: Toi @ Transform2d, Config::MIRRORED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        vec2_at_rest: Toi at rest @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_at_rest: Toi at rest @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
+    cast_tests!(Toi);
 }
 
 mod toiae {
     use super::*;
-    cast_test!(
-        vec2: Toiae @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        vec2_tiny: Toiae @ Vec2, Config::TINY,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        vec2_huge: Toiae @ Vec2, Config::HUGE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_axis_aligned: Toiae @ Transform2d, Config::AXIS_ALIGNED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_rigid: Toiae @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d: Toiae @ Transform2d, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_mirrored: Toiae @ Transform2d, Config::MIRRORED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        vec2_at_rest: Toiae at rest @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
-    cast_test!(
-        transform2d_at_rest: Toiae at rest @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d, Shape2d-Point, Shape2d-Ball, Shape2d-Box2d,
-            Shape2d-Poly2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
-        ]
-    );
+    cast_tests!(Toiae);
 }
 
 mod tttoi {
     use super::*;
-    cast_test!(
-        vec2: TtToi @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        vec2_tiny: TtToi @ Vec2, Config::TINY,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        vec2_huge: TtToi @ Vec2, Config::HUGE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_axis_aligned: TtToi @ Transform2d, Config::AXIS_ALIGNED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_rigid: TtToi @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d: TtToi @ Transform2d, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_mirrored: TtToi @ Transform2d, Config::MIRRORED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        vec2_at_rest: TtToi at rest @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_at_rest: TtToi at rest @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
+    cast_tests!(TtToi);
 }
 
 mod tttoiae {
     use super::*;
-    cast_test!(
-        vec2: TtToiae @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        vec2_tiny: TtToiae @ Vec2, Config::TINY,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        vec2_huge: TtToiae @ Vec2, Config::HUGE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_axis_aligned: TtToiae @ Transform2d, Config::AXIS_ALIGNED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_rigid: TtToiae @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d: TtToiae @ Transform2d, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_mirrored: TtToiae @ Transform2d, Config::MIRRORED,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        vec2_at_rest: TtToiae at rest @ Vec2, Config::BASE,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
-    cast_test!(
-        transform2d_at_rest: TtToiae at rest @ Transform2d, Config::RIGID,
-        [
-            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
-            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
-        ]
-    );
+    cast_tests!(TtToiae);
 }

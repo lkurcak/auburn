@@ -19,6 +19,10 @@ impl Shape for Point {
     fn area(&self) -> f32 {
         0.0
     }
+
+    fn primitive(&self) -> super::Primitive<'_> {
+        super::Primitive::Point
+    }
 }
 
 impl Support for Point {

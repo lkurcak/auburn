@@ -16,6 +16,28 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 
 const X5: Vec3 = Vec3::new(5.0, 0.0, 0.0);
 
+// Known bugs.
+
+/// The generic cast stalls short of a box that a point's path misses by 0.0029, and takes it
+/// for a graze: what it reached is within its stall tolerance, 1e-3 of the box's size. Points
+/// against boxes have an exact cast, so this calls `shape_cast` itself.
+#[test]
+#[ignore = "backlog/ray-cast-near-miss.md"]
+fn shape_cast_near_miss() {
+    let point = Vec3::new(-1.8623064, -0.6821871, -2.0441236);
+    let cube = Box3d::new(Vec3::new(1.5448021, 1.4674568, 0.23566282));
+    let tr = Transform3d {
+        pos: Vec3::new(-0.5543475, -0.4805994, 2.0603495),
+        rot: auburn3d::Quat::from_xyzw(-0.53891766, -0.26493365, 0.40215093, 0.69112414),
+        scale: 1.0,
+    };
+    let vel = Vec3::new(4.1491265, 0.48336107, 10.507398);
+    let got = auburn3d::algorithm::shape_cast(|_| point, |dir| cube.at(&tr).support(dir), vel);
+    assert_eq!(got, None);
+    // The exact cast gets it right.
+    assert_eq!(Point.at(&point).tttoiae(&cube.at(&tr), vel), None);
+}
+
 // Fixed bugs.
 
 /// 3D casts involving boxes used conservative advancement, which stopped at t = 1, stalled once

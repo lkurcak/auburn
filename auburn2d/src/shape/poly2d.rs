@@ -151,6 +151,10 @@ impl Shape for Poly2d {
             .sum();
         0.5 * twice.abs()
     }
+
+    fn primitive(&self) -> super::Primitive<'_> {
+        super::Primitive::Poly2d(self)
+    }
 }
 
 impl Support for Poly2d {

@@ -4,8 +4,11 @@ Do this after the benchmarks exist.
 
 - The default `Transformation2d::support_direction` computes `inverse()` on every support
   call, for user types that don't implement it. Compute the inverse once per query.
-- The `Transform2d` Poly2d casts collect each polygon's world-space vertices into a `Vec` on
-  every call. The `Vec2` ones work in the polygon's frame and don't.
+- Poly2d casts under a rotation or a scale collect the polygon's turned vertices into a `Vec`
+  on every call. Under a translation alone they don't.
+- Most casts got faster in #32, but three are slower than the hand-written casts they
+  replaced: Ball–Box2d `toi` (about 2×, as it now finds the exit too), Box2d–Poly2d (1.2×)
+  and two Box2d at different angles (1.35×).
 - 3D EPA looks for the closest face by scanning every face, removed ones too; a heap would
   do. Balls take 20 to 60 iterations to converge, and 2.6% of the randomized cases stop at
   the cap of 64.

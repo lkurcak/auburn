@@ -80,30 +80,30 @@ impl Report {
     }
 }
 
-fn label<A: Sample, B: Sample, T: Place>(check: &str, cfg: &Config) -> String {
-    format!(
-        "{check} {}-{} @{} ({})",
-        A::NAME,
-        B::NAME,
-        T::NAME,
-        cfg.name
-    )
+/// The check's name, which also seeds its cases. `a` is placed by a `TA` and `b` by a `TB`.
+fn label<A: Sample, B: Sample, TA: Place, TB: Place>(check: &str, cfg: &Config) -> String {
+    let place = if TA::NAME == TB::NAME {
+        TA::NAME.to_string()
+    } else {
+        format!("{} and {}", TA::NAME, TB::NAME)
+    };
+    format!("{check} {}-{} @{place} ({})", A::NAME, B::NAME, cfg.name)
 }
 
-struct Scene<A, B, T> {
+struct Scene<A, B, TA, TB> {
     a: A,
     b: B,
-    ta: T,
-    tb: T,
+    ta: TA,
+    tb: TB,
 }
 
-impl<A: Sample, B: Sample, T: Place> Scene<A, B, T> {
+impl<A: Sample, B: Sample, TA: Place, TB: Place> Scene<A, B, TA, TB> {
     fn sample(rng: &mut Rng, cfg: &Config) -> Self {
         Self {
             a: A::sample(rng, cfg),
             b: B::sample(rng, cfg),
-            ta: T::sample(rng, cfg),
-            tb: T::sample(rng, cfg),
+            ta: TA::sample(rng, cfg),
+            tb: TB::sample(rng, cfg),
         }
     }
 
@@ -132,12 +132,12 @@ where
     for<'a> Collider<'a, A, T>: Collides<Collider<'a, B, T>> + Penetrates<Collider<'a, B, T>>,
     for<'a> Collider<'a, B, T>: Collides<Collider<'a, A, T>> + Penetrates<Collider<'a, A, T>>,
 {
-    let label = label::<A, B, T>("collides", cfg);
+    let label = label::<A, B, T, T>("collides", cfg);
     let mut rng = Rng::from_label(&label);
     let mut out = Outcome::new(label, n);
     let tol = cfg.tolerance();
     for _ in 0..n {
-        let s = Scene::<A, B, T>::sample(&mut rng, cfg);
+        let s = Scene::<A, B, T, T>::sample(&mut rng, cfg);
         let (ca, cb) = (s.a.at(&s.ta), s.b.at(&s.tb));
         let depth = s.truth().depth(DVec3::ZERO);
         let (ab, ba) = (ca.collides(&cb), cb.collides(&ca));
@@ -170,7 +170,7 @@ where
     for<'a> Collider<'a, A, T>: Penetrates<Collider<'a, B, T>>,
     for<'a> Collider<'a, B, T>: Penetrates<Collider<'a, A, T>>,
 {
-    let label = label::<A, B, T>("penetrates", cfg);
+    let label = label::<A, B, T, T>("penetrates", cfg);
     let mut rng = Rng::from_label(&label);
     let mut out = Outcome::new(label, n);
     let tol = cfg.tolerance();
@@ -179,7 +179,7 @@ where
         if out.cases == n {
             break;
         }
-        let s = Scene::<A, B, T>::sample(&mut rng, cfg);
+        let s = Scene::<A, B, T, T>::sample(&mut rng, cfg);
         let truth = s.truth();
         let depth = truth.depth(DVec3::ZERO);
         if depth <= tol {
@@ -237,19 +237,20 @@ fn close(got: f32, want: f64, slack: f64) -> bool {
     (f64::from(got) - want).abs() <= slack + 1e-4 * want.abs()
 }
 
-/// The cast `kind`, with `a` moving at a nonzero velocity, agrees with the truth.
-pub fn cast<A: Sample, B: Sample, T: Place>(
+/// The cast `kind`, with `a` moving at a nonzero velocity, agrees with the truth. `a` is placed
+/// by a `TA` and `b` by a `TB`.
+pub fn cast<A: Sample, B: Sample, TA: Place, TB: Place>(
     cfg: &Config,
     n: usize,
     kind: Kind,
-    query: impl Fn(&Collider<A, T>, &Collider<B, T>, Vec3) -> Hit,
+    query: impl Fn(&Collider<A, TA>, &Collider<B, TB>, Vec3) -> Hit,
 ) -> Outcome {
-    let label = label::<A, B, T>(&format!("{kind:?}"), cfg);
+    let label = label::<A, B, TA, TB>(&format!("{kind:?}"), cfg);
     let mut rng = Rng::from_label(&label);
     let mut out = Outcome::new(label, n);
     let tol = cfg.tolerance();
     for _ in 0..n {
-        let s = Scene::<A, B, T>::sample(&mut rng, cfg);
+        let s = Scene::<A, B, TA, TB>::sample(&mut rng, cfg);
         let vel = velocity(
             &mut rng,
             cfg,
@@ -301,18 +302,18 @@ pub fn cast<A: Sample, B: Sample, T: Place>(
 /// The cast `kind` at zero velocity reports the overlap the shapes have now: `None` if they are
 /// apart, and if they overlap, an overlap that lasts forever: from 0 for the bounded casts and
 /// from minus infinity for the time-traveling ones, to infinity.
-pub fn cast_at_rest<A: Sample, B: Sample, T: Place>(
+pub fn cast_at_rest<A: Sample, B: Sample, TA: Place, TB: Place>(
     cfg: &Config,
     n: usize,
     kind: Kind,
-    query: impl Fn(&Collider<A, T>, &Collider<B, T>, Vec3) -> Hit,
+    query: impl Fn(&Collider<A, TA>, &Collider<B, TB>, Vec3) -> Hit,
 ) -> Outcome {
-    let label = label::<A, B, T>(&format!("{kind:?} at rest"), cfg);
+    let label = label::<A, B, TA, TB>(&format!("{kind:?} at rest"), cfg);
     let mut rng = Rng::from_label(&label);
     let mut out = Outcome::new(label, n);
     let tol = cfg.tolerance();
     for _ in 0..n {
-        let s = Scene::<A, B, T>::sample(&mut rng, cfg);
+        let s = Scene::<A, B, TA, TB>::sample(&mut rng, cfg);
         let vel = Vec3::new(rng.zero(), rng.zero(), rng.zero());
         let got = query(&s.a.at(&s.ta), &s.b.at(&s.tb), vel);
         let depth = s.truth().depth(DVec3::ZERO);

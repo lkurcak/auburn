@@ -1,4 +1,4 @@
-use crate::Vec3;
+use crate::{Quat, Vec3};
 
 use super::Transformation3d;
 
@@ -25,6 +25,10 @@ impl Transformation3d for Pos3d {
 
     fn support_direction(&self, dir: Vec3) -> Vec3 {
         dir
+    }
+
+    fn rotation_and_scale(&self) -> Option<(Quat, Vec3)> {
+        self.0.rotation_and_scale()
     }
 }
 

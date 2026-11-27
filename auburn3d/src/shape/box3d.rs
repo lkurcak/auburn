@@ -36,6 +36,10 @@ impl Shape for Box3d {
     fn volume(&self) -> f32 {
         self.half_size.x * self.half_size.y * self.half_size.z * 8.0
     }
+
+    fn primitive(&self) -> super::Primitive<'_> {
+        super::Primitive::Box3d(self)
+    }
 }
 
 impl Support for Box3d {

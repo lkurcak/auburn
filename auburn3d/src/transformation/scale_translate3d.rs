@@ -1,4 +1,4 @@
-use crate::Vec3;
+use crate::{Quat, Vec3};
 use std::ops::Mul;
 
 use super::Transformation3d;
@@ -38,6 +38,10 @@ impl Transformation3d for ScaleTranslate3d {
 
     fn support_direction(&self, dir: Vec3) -> Vec3 {
         dir * self.scale
+    }
+
+    fn rotation_and_scale(&self) -> Option<(Quat, Vec3)> {
+        Some((Quat::IDENTITY, Vec3::splat(self.scale)))
     }
 }
 

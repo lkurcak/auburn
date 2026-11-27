@@ -29,6 +29,10 @@ impl Shape for Ball {
     fn volume(&self) -> f32 {
         (4.0 / 3.0) * std::f32::consts::PI * self.radius * self.radius * self.radius
     }
+
+    fn primitive(&self) -> super::Primitive<'_> {
+        super::Primitive::Ball(self)
+    }
 }
 
 impl Support for Ball {
