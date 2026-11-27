@@ -52,6 +52,10 @@ fn handle_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
 }
 
 /// Handle the case where the simplex is a line segment.
+///
+/// Like the triangle case, it keeps the search direction about as long as the simplex's
+/// edges. A cubic triple product would underflow for tiny shapes, overflow for huge ones, and
+/// lose its precision in `Collider::support`, which adds a translation to it.
 fn handle_line_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
     let a = simplex.get(1);
     let b = simplex.get(0);
@@ -60,12 +64,12 @@ fn handle_line_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool {
     let ao = -a;
 
     if ab.dot(ao) > 0.0 {
-        // The origin is somewhere past b in the direction perpendicular to ab
-        *direction = ab.cross(ao).cross(ab);
-        if direction.length_squared() < 1e-10 {
-            // ab and ao are parallel, use perpendicular
-            *direction = ab.any_orthonormal_vector();
-        }
+        // The origin is past a, towards b: search perpendicular to ab, towards the origin.
+        // If the origin is on the line, any perpendicular will do.
+        *direction = match ab.cross(ao).try_normalize() {
+            Some(normal) => normal.cross(ab),
+            None => ab.any_orthogonal_vector(),
+        };
     } else {
         // The origin is closest to a
         simplex.set(&[a]);
@@ -85,7 +89,11 @@ fn handle_triangle_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool 
     let ac = c - a;
     let ao = -a;
 
-    let abc = ab.cross(ac);
+    let Some(abc) = ab.cross(ac).try_normalize() else {
+        // The points are on a line: keep the newest edge.
+        simplex.set(&[b, a]);
+        return handle_line_simplex(simplex, direction);
+    };
 
     // Edge AB: perpendicular pointing away from C
     let ab_perp = ab.cross(abc);
@@ -103,14 +111,15 @@ fn handle_triangle_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bool 
         return false;
     }
 
-    // Origin is in the triangle plane; check which side it is on
-    if abc.dot(ao) > 0.0 {
+    // Origin is in the triangle's prism; check which side it is on
+    let normal = abc * ab.length();
+    if normal.dot(ao) > 0.0 {
         // Above the triangle
-        *direction = abc;
+        *direction = normal;
     } else {
         // Below the triangle; swap b and c to keep winding consistent
         simplex.set(&[b, c, a]);
-        *direction = -abc;
+        *direction = -normal;
     }
 
     false
@@ -155,16 +164,9 @@ fn handle_tetrahedron_simplex(simplex: &mut Simplex, direction: &mut Vec3) -> bo
         return handle_triangle_simplex(simplex, direction);
     }
 
-    // Face BCD: opposite vertex A
-    let bc = c - b;
-    let bd = d - b;
-    let bcd = bc.cross(bd);
-    let bcd_normal = if bcd.dot(a - b) > 0.0 { -bcd } else { bcd };
-    if bcd_normal.dot(-b) > 0.0 {
-        simplex.set(&[d, c, b]);
-        *direction = bcd_normal;
-        return handle_triangle_simplex(simplex, direction);
-    }
+    // Face BCD is the previous triangle, and a was found searching from it towards the
+    // origin, so the origin is on a's side of it. Testing it anyway only lets rounding send
+    // the search back to that triangle, which finds a again, forever.
 
     // Origin is inside the tetrahedron
     true
@@ -193,12 +195,11 @@ where
 
     // Get the first point
     let first_point = support(direction);
-    if first_point.length_squared() < 1e-10 {
-        // Origin is inside the Minkowski difference (or extremely close)
-        simplex.push(first_point);
+    simplex.push(first_point);
+    if first_point == Vec3::ZERO {
+        // The origin is on the Minkowski difference: the shapes touch.
         return Some(simplex);
     }
-    simplex.push(first_point);
     direction = -first_point;
 
     for _ in 0..max_iterations {

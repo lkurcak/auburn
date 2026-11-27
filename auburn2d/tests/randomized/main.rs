@@ -127,15 +127,10 @@ mod collides {
     );
     static_test!(
         transform2d_tiny: collides @ Transform2d, Config::TINY,
-        [Point-Point]
-    );
-    static_test!(
-        #[ignore = "backlog/gjk-tolerances.md"]
-        transform2d_tiny_gjk_tolerances: collides @ Transform2d, Config::TINY,
         [
-            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
-            Poly2d-Shape2d, Shape2d-Shape2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball,
+            Ball-Box2d, Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d,
+            Poly2d-Poly2d, Poly2d-Shape2d, Shape2d-Shape2d
         ]
     );
     static_test!(
@@ -149,14 +144,10 @@ mod collides {
     static_test!(
         vec2_far: collides @ Vec2, Config::FAR,
         [
-            Point-Point, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Poly2d,
-            Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d, Shape2d-Shape2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball,
+            Ball-Box2d, Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d,
+            Poly2d-Poly2d, Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/support-direction.md"]
-        vec2_far_support_direction: collides @ Vec2, Config::FAR,
-        [Point-Ball, Ball-Box2d, Poly2d-Shape2d]
     );
     static_test!(
         #[cfg(feature = "bevy")]
@@ -244,13 +235,16 @@ mod penetrates {
         [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
-        #[ignore = "backlog/gjk-tolerances.md"]
-        transform2d_tiny_gjk_tolerances: penetrates @ Transform2d, Config::TINY,
+        transform2d_tiny: penetrates @ Transform2d, Config::TINY,
         [
-            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
-            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
-            Poly2d-Shape2d, Shape2d-Shape2d
+            Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Box2d, Ball-Poly2d, Box2d-Box2d,
+            Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d, Poly2d-Shape2d
         ]
+    );
+    static_test!(
+        #[ignore = "backlog/epa-2d.md"]
+        transform2d_tiny_epa: penetrates @ Transform2d, Config::TINY,
+        [Point-Ball, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         transform2d_huge: penetrates @ Transform2d, Config::HUGE,
@@ -266,20 +260,11 @@ mod penetrates {
     );
     static_test!(
         vec2_far: penetrates @ Vec2, Config::FAR,
-        [Box2d-Box2d]
-    );
-    static_test!(
-        #[ignore = "backlog/support-direction.md"]
-        vec2_far_support_direction: penetrates @ Vec2, Config::FAR,
         [
-            Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Poly2d, Box2d-Shape2d,
-            Poly2d-Poly2d, Poly2d-Shape2d
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
         ]
-    );
-    static_test!(
-        #[ignore = "backlog/support-direction.md, backlog/epa-2d.md"]
-        vec2_far_support_direction_epa: penetrates @ Vec2, Config::FAR,
-        [Point-Ball, Point-Shape2d, Ball-Ball, Ball-Shape2d, Shape2d-Shape2d]
     );
     static_test!(
         #[cfg(feature = "bevy")]
@@ -316,19 +301,15 @@ mod toi {
     cast_test!(
         vec2_tiny: Toi @ Vec2, Config::TINY,
         [
-            Point-Point, Point-Ball, Point-Box2d, Ball-Point, Ball-Ball, Box2d-Point, Box2d-Box2d,
-            Box2d-Poly2d, Poly2d-Point, Shape2d-Point, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d
+            Point-Point, Point-Ball, Point-Box2d, Ball-Point, Ball-Ball, Ball-Box2d, Box2d-Point,
+            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Shape2d-Point, Shape2d-Ball,
+            Shape2d-Box2d, Point-Shape2d, Ball-Shape2d, Box2d-Shape2d, Shape2d-Shape2d
         ]
     );
     cast_test!(
         #[ignore = "backlog/generic-shape-cast.md"]
         vec2_tiny_shape_cast: Toi @ Vec2, Config::TINY,
         [Ball-Poly2d, Poly2d-Ball, Shape2d-Poly2d]
-    );
-    cast_test!(
-        #[ignore = "backlog/gjk-tolerances.md"]
-        vec2_tiny_gjk_tolerances: Toi @ Vec2, Config::TINY,
-        [Ball-Box2d, Box2d-Ball, Shape2d-Ball, Shape2d-Box2d, Shape2d-Shape2d]
     );
     cast_test!(
         #[ignore = "backlog/poly2d-robustness.md"]

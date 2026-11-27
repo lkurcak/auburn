@@ -1,13 +1,16 @@
 # 3D EPA returns zero or wrong vectors
 
-Affects 20–30% of ball/point overlaps and about 1% of box pairs. Reproduced on cf06cd2; line
-numbers are approximate.
+Affects about half of ball/point overlaps and 2–3% of box pairs (the randomized suite at 20
+times the cases). Reproduced on the commit of #18.
 
 - `Ball(1.8047013)@(2.0084305,1.0236154,-2.4085774)` vs `Point@(2.7466345,0.9463959,-2.1651053)`
-  gives `Some((0,0,0))`; true depth 1.0236.
+  gives about `(6.5e-13,-6.1e-13,0)`; true depth 1.0236.
 - Concentric `Ball(1)`/`Ball(2)` gives |p| = 2.62; it should be 3.
 - File: `auburn3d/src/algorithm/epa.rs`. Suspects:
-  - zero normals from degenerate faces (~124-133);
-  - the `Vec3::ZERO` fallback (~116-121);
-  - the GJK early exit handing EPA a 1-point simplex instead of a tetrahedron (related to
-    [GJK tolerances](gjk-tolerances.md)).
+  - degenerate faces: `compute_face_normal` leaves their normal unnormalized, so the face
+    sits at distance ~0 and wins `find_closest_face`. The near-zero answers look like this;
+  - the `Vec3::ZERO` fallback at the end of `epa`.
+- No longer a suspect: GJK's early exit now only fires when the first support point is
+  exactly the origin, i.e. for shapes that touch.
+- Failure rates move by a few percent with the tetrahedron GJK hands over, but not with the
+  stopping tolerance.

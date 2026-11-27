@@ -60,12 +60,9 @@ fn handle_line_simplex(simplex: &mut Simplex, direction: &mut Vec2) -> bool {
 
     // Check if the origin is in the direction of b
     if ab.dot(ao) > 0.0 {
-        // The origin is somewhere past b in the direction perpendicular to ab
-        *direction = triple_product(ab, ao, ab);
-        if direction.length_squared() < 1e-10 {
-            // ab and ao are parallel, use perpendicular
-            *direction = Vec2::new(-ab.y, ab.x);
-        }
+        // Search perpendicular to ab, towards the origin. If the origin is on the line, either
+        // side will do.
+        *direction = perp_towards(ab, ao);
     } else {
         // The origin is closest to a
         simplex.set(&[a]);
@@ -85,8 +82,8 @@ fn handle_triangle_simplex(simplex: &mut Simplex, direction: &mut Vec2) -> bool 
     let ac = c - a;
     let ao = -a;
 
-    let ab_perp = triple_product(ac, ab, ab);
-    let ac_perp = triple_product(ab, ac, ac);
+    let ab_perp = -perp_towards(ab, ac);
+    let ac_perp = -perp_towards(ac, ab);
 
     if ab_perp.dot(ao) > 0.0 {
         // Origin is closest to edge ab
@@ -104,13 +101,14 @@ fn handle_triangle_simplex(simplex: &mut Simplex, direction: &mut Vec2) -> bool 
     false
 }
 
-/// Compute the triple product: (a × b) × c in 2D
-/// This gives us a vector perpendicular to c in the plane, pointing away from a
-fn triple_product(a: Vec2, b: Vec2, c: Vec2) -> Vec2 {
-    // In 2D: (a × b) × c = b(c·a) - a(c·b)
-    // where × is the cross product (scalar in 2D)
-    let cross_ab = a.x * b.y - a.y * b.x;
-    Vec2::new(-c.y * cross_ab, c.x * cross_ab)
+/// The perpendicular of `edge` on the side of `towards`, or either one if `towards` is
+/// parallel to `edge`.
+///
+/// It is as long as `edge`, so it neither underflows for tiny shapes nor overflows for huge
+/// ones, and the only threshold is the exact sign of a dot product.
+fn perp_towards(edge: Vec2, towards: Vec2) -> Vec2 {
+    let perp = edge.perp();
+    if perp.dot(towards) < 0.0 { -perp } else { perp }
 }
 
 /// Run the GJK algorithm to detect collision between two shapes.
@@ -137,6 +135,10 @@ where
     // Get the first point
     let first_point = support(direction);
     simplex.push(first_point);
+    if first_point == Vec2::ZERO {
+        // The origin is on the Minkowski difference: the shapes touch.
+        return Some(simplex);
+    }
     direction = -first_point;
 
     for _ in 0..max_iterations {

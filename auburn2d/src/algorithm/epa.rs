@@ -4,7 +4,12 @@ use super::gjk::Simplex;
 use crate::Vec2;
 
 const EPA_MAX_ITERATIONS: usize = 30;
-const EPA_TOLERANCE: f32 = 1e-4;
+/// EPA stops once a support point gets no further than this fraction of the polytope's size
+/// past the closest edge. Being relative, it works the same for tiny and huge shapes.
+const EPA_RELATIVE_TOLERANCE: f32 = 1e-5;
+/// Far from the origin, rounding in the support points' world coordinates outweighs that, so
+/// EPA also stops at this many units of f32 precision of those coordinates.
+const EPA_ROUNDING_TOLERANCE: f32 = 4.0 * f32::EPSILON;
 
 /// Represents an edge of the polytope with its distance and normal
 #[derive(Debug, Clone, Copy)]
@@ -28,8 +33,11 @@ where
     F1: Fn(Vec2) -> Vec2,
     F2: Fn(Vec2) -> Vec2,
 {
-    // Minkowski difference support function
-    let support = |dir: Vec2| -> Vec2 { support_a(dir) - support_b(-dir) };
+    // Minkowski difference support function, and the size of its world coordinates
+    let support = |dir: Vec2| -> (Vec2, f32) {
+        let (a, b) = (support_a(dir), support_b(-dir));
+        (a - b, a.abs().max(b.abs()).max_element())
+    };
 
     // Convert simplex to polytope (list of vertices)
     let mut polytope: Vec<Vec2> = Vec::new();
@@ -47,18 +55,24 @@ where
         }
     }
 
+    // Every vertex is on the Minkowski difference's boundary, so the farthest one bounds the
+    // penetration depth from above.
+    let size = polytope.iter().map(|v| v.length()).fold(0.0, f32::max);
+    let relative_tolerance = EPA_RELATIVE_TOLERANCE * size;
+
     for _ in 0..EPA_MAX_ITERATIONS {
         // Find the closest edge to the origin
         let edge = find_closest_edge(&polytope);
 
         // Get a new support point in the direction of the edge normal
-        let support_point = support(edge.normal);
+        let (support_point, world) = support(edge.normal);
+        let tolerance = relative_tolerance.max(EPA_ROUNDING_TOLERANCE * world);
 
         // Check how much further we can go
         let distance = support_point.dot(edge.normal);
 
         // If we're not making progress, we've found the penetration depth
-        if distance - edge.distance < EPA_TOLERANCE {
+        if distance - edge.distance <= tolerance {
             // Return the penetration vector
             // Note: This points from A to B (direction to push B away from A)
             return edge.normal * distance;
@@ -92,9 +106,10 @@ fn find_closest_edge(polytope: &[Vec2]) -> Edge {
         // Normal perpendicular to the edge (pointing outward)
         let mut normal = Vec2::new(edge.y, -edge.x);
         let length = normal.length();
-        if length > 1e-10 {
+        if length > 0.0 {
             normal /= length;
         } else {
+            // Duplicate vertices.
             continue;
         }
 
