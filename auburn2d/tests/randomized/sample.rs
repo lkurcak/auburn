@@ -359,7 +359,7 @@ fn by_angle(a: &Vec2, b: &Vec2) -> Ordering {
 
 impl Sample for Poly2d {
     const NAME: &'static str = "Poly2d";
-    /// A random convex polygon with 3 to 8 vertices, counter-clockwise, as `Poly2d::new` asks.
+    /// A random convex polygon with 3 to 8 vertices, either way round.
     fn sample(rng: &mut Rng, cfg: &Config) -> Self {
         let directions = loop {
             let n = 3 + rng.below(6);
@@ -373,13 +373,16 @@ impl Sample for Poly2d {
         let axes = rng.vec2(cfg.min_size, cfg.max_size);
         let tilt = rng.direction();
         let center = rng.vec2(-0.3 * cfg.max_size, 0.3 * cfg.max_size);
-        let points = directions
+        let mut points: Vec<Vec2> = directions
             .iter()
             .map(|&d| {
                 let p = d * axes;
                 Vec2::new(tilt.x * p.x - tilt.y * p.y, tilt.y * p.x + tilt.x * p.y) + center
             })
             .collect();
+        if rng.chance(0.5) {
+            points.reverse();
+        }
         Poly2d::new(Arc::new(points))
     }
     fn geometry(&self, place: &impl Place) -> Geometry {

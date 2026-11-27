@@ -12,7 +12,7 @@ use crate::transformation::Transformation2d;
 /// A velocity too small for its reciprocal to be finite (zero of either sign, or subnormal)
 /// counts as not moving: the slab method would otherwise multiply 0 by infinity where the
 /// motion starts exactly on `lo` or `hi`.
-pub(super) fn slab(lo: f32, hi: f32, vel: f32) -> Option<(f32, f32)> {
+pub(crate) fn slab(lo: f32, hi: f32, vel: f32) -> Option<(f32, f32)> {
     let inv_vel = 1.0 / vel;
     if !inv_vel.is_finite() {
         return (lo <= 0.0 && 0.0 <= hi).then_some((f32::NEG_INFINITY, f32::INFINITY));
