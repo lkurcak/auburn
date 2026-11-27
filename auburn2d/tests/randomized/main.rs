@@ -593,28 +593,18 @@ mod tttoi {
     cast_test!(
         vec2_at_rest: TtToi at rest @ Vec2, Config::BASE,
         [
-            Point-Point, Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Ball, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec2_at_rest_edge_cases: TtToi at rest @ Vec2, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         transform2d_at_rest: TtToi at rest @ Transform2d, Config::RIGID,
         [
-            Point-Point, Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Ball, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        transform2d_at_rest_edge_cases: TtToi at rest @ Transform2d, Config::RIGID,
-        [Point-Ball, Ball-Point, Ball-Ball]
     );
 }
 
@@ -718,27 +708,17 @@ mod tttoiae {
     cast_test!(
         vec2_at_rest: TtToiae at rest @ Vec2, Config::BASE,
         [
-            Point-Point, Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Ball, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        vec2_at_rest_edge_cases: TtToiae at rest @ Vec2, Config::BASE,
-        [Point-Ball, Ball-Point, Ball-Ball]
     );
     cast_test!(
         transform2d_at_rest: TtToiae at rest @ Transform2d, Config::RIGID,
         [
-            Point-Point, Point-Box2d, Point-Poly2d, Ball-Box2d, Ball-Poly2d, Box2d-Point,
-            Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point, Poly2d-Ball, Poly2d-Box2d,
-            Poly2d-Poly2d
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Ball-Point, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Box2d-Point, Box2d-Ball, Box2d-Box2d, Box2d-Poly2d, Poly2d-Point,
+            Poly2d-Ball, Poly2d-Box2d, Poly2d-Poly2d
         ]
-    );
-    cast_test!(
-        #[ignore = "backlog/cast-edge-cases.md"]
-        transform2d_at_rest_edge_cases: TtToiae at rest @ Transform2d, Config::RIGID,
-        [Point-Ball, Ball-Point, Ball-Ball]
     );
 }

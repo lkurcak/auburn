@@ -2,7 +2,6 @@
 
 ## Now
 
-1. [Cast edge cases: NaN, negative times, zero and tiny velocities](backlog/cast-edge-cases.md)
 1. [`Poly2d` robustness: winding, epsilons, `area`, empty polygons](backlog/poly2d-robustness.md)
 1. Remove `From<ScaleTranslate2d> for bevy Isometry2d` (bevy feature): its body is `todo!()`, so it can only panic. Removing it is technically breaking.
 1. [Bevy `Transform` with uneven scale](backlog/bevy-uneven-scale.md)
@@ -41,6 +40,7 @@
 
 ## Done
 
+- Ball and point casts read off one overlap span: no NaN at rest, negative time-traveling times in 3D, tiny velocities, Point–Point through-paths; the at-rest answers are documented and every pair gives them (#26)
 - `Transform2d` ball casts scale each radius once, by its own |scale|, and ball `toiae` gives the exit when starting inside; box casts take |scale| too (#25)
 - 2D EPA returns the shortest support distance it finds, so deep, near-concentric balls get their depth and direction (#24)
 - 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#23)

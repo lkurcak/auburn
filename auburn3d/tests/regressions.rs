@@ -16,48 +16,6 @@ fn near_span(got: Option<(f32, f32)>, want: (f32, f32)) -> bool {
 
 const X5: Vec3 = Vec3::new(5.0, 0.0, 0.0);
 
-// backlog/cast-edge-cases.md
-
-#[test]
-#[ignore = "backlog/cast-edge-cases.md"]
-fn time_traveling_casts_go_negative() {
-    let z = Vec3::ZERO;
-    let ball = Ball::new(1.0);
-    let r = ball
-        .at(&z)
-        .tttoi(&Point.at(&Vec3::new(0.5, 0.0, 0.0)), Vec3::X);
-    assert!(near(r, -0.5), "{r:?}");
-    let r = ball
-        .at(&z)
-        .tttoiae(&Point.at(&Vec3::new(-3.0, 0.0, 0.0)), Vec3::X);
-    assert!(near_span(r, (-4.0, -2.0)), "contact in the past: {r:?}");
-}
-
-#[test]
-#[ignore = "backlog/cast-edge-cases.md"]
-fn overlap_at_rest() {
-    let z = Vec3::ZERO;
-    let ball = Ball::new(1.0);
-    let r = ball
-        .at(&z)
-        .toi(&Point.at(&Vec3::new(0.5, 0.0, 0.0)), Vec3::ZERO);
-    assert_eq!(r, Some(0.0));
-    let r = ball.at(&z).toi(&ball.at(&Vec3::X), Vec3::ZERO);
-    assert_eq!(r, Some(0.0));
-}
-
-#[test]
-#[ignore = "backlog/cast-edge-cases.md"]
-fn slow_cast() {
-    let z = Vec3::ZERO;
-    let ball = Ball::new(1.0);
-    let r = ball.at(&z).toi(
-        &ball.at(&Vec3::new(3.0, 0.0, 0.0)),
-        Vec3::new(1e-6, 0.0, 0.0),
-    );
-    assert!(r.is_some_and(|t| (t - 1e6).abs() < 1e3), "{r:?}");
-}
-
 // backlog/generic-shape-cast.md
 
 #[test]
@@ -100,6 +58,69 @@ fn box_ball_toiae() {
 }
 
 // Fixed bugs.
+
+/// `tttoi` and `tttoiae` for balls and points called `toi` and `toiae`, so never went below 0.
+#[test]
+fn time_traveling_casts_go_negative() {
+    let z = Vec3::ZERO;
+    let ball = Ball::new(1.0);
+    let r = ball
+        .at(&z)
+        .tttoi(&Point.at(&Vec3::new(0.5, 0.0, 0.0)), Vec3::X);
+    assert!(near(r, -0.5), "{r:?}");
+    let r = ball
+        .at(&z)
+        .tttoiae(&Point.at(&Vec3::new(-3.0, 0.0, 0.0)), Vec3::X);
+    assert!(near_span(r, (-4.0, -2.0)), "contact in the past: {r:?}");
+}
+
+/// At zero velocity, Ball–Point casts solved a linear equation that has no solution and gave
+/// `None` for overlapping shapes.
+#[test]
+fn overlap_at_rest() {
+    let z = Vec3::ZERO;
+    let ball = Ball::new(1.0);
+    let r = ball
+        .at(&z)
+        .toi(&Point.at(&Vec3::new(0.5, 0.0, 0.0)), Vec3::ZERO);
+    assert_eq!(r, Some(0.0));
+    let r = ball.at(&z).toi(&ball.at(&Vec3::X), Vec3::ZERO);
+    assert_eq!(r, Some(0.0));
+    let r = ball.at(&z).toiae(&ball.at(&Vec3::X), Vec3::ZERO);
+    assert_eq!(r, Some((0.0, f32::INFINITY)));
+    let r = ball.at(&z).tttoiae(&ball.at(&Vec3::X), Vec3::ZERO);
+    assert_eq!(r, Some((f32::NEG_INFINITY, f32::INFINITY)));
+    let r = ball.at(&z).tttoi(&ball.at(&X5), Vec3::ZERO);
+    assert_eq!(r, None);
+}
+
+/// Ball–Point casts took a velocity with a squared length below 1e-10 as linear motion.
+#[test]
+fn slow_cast() {
+    let z = Vec3::ZERO;
+    let ball = Ball::new(1.0);
+    let r = ball.at(&z).toi(
+        &ball.at(&Vec3::new(3.0, 0.0, 0.0)),
+        Vec3::new(1e-6, 0.0, 0.0),
+    );
+    assert!(r.is_some_and(|t| (t - 1e6).abs() < 1e3), "{r:?}");
+}
+
+/// Point–Point `toiae` gave an exit of infinity. A point passes through another in no time.
+#[test]
+fn point_point_exit() {
+    let z = Vec3::ZERO;
+    assert!(near_span(
+        Point.at(&z).toiae(&Point.at(&X5), Vec3::X),
+        (5.0, 5.0)
+    ));
+    assert!(near_span(
+        Point.at(&z).tttoiae(&Point.at(&X5), -Vec3::X),
+        (-5.0, -5.0)
+    ));
+    let r = Point.at(&z).tttoiae(&Point.at(&z), Vec3::ZERO);
+    assert_eq!(r, Some((f32::NEG_INFINITY, f32::INFINITY)));
+}
 
 /// GJK searched along an edge's perpendicular in its triangle's plane rather than from the
 /// edge to the origin, so it cycled through the same edges and triangles and missed.

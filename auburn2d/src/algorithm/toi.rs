@@ -2,6 +2,7 @@ use super::gjk::gjk;
 /// Time of Impact (TOI) using Conservative Advancement algorithm.
 /// This provides a generic fallback that works with any shapes that implement Support.
 use crate::Vec2;
+use crate::relation::cast::is_at_rest;
 
 const MAX_ITERATIONS: usize = 32;
 const TOLERANCE: f32 = 1e-4;
@@ -23,8 +24,8 @@ where
     F1: Fn(Vec2) -> Vec2,
     F2: Fn(Vec2) -> Vec2,
 {
-    // If no relative velocity, just check current state
-    if vel == Vec2::ZERO {
+    // At rest, overlapping shapes overlap from now on
+    if is_at_rest(vel) {
         return gjk(support_a, support_b, 30).map(|_| 0.0);
     }
 
@@ -110,6 +111,9 @@ where
     F1: Fn(Vec2) -> Vec2 + Copy,
     F2: Fn(Vec2) -> Vec2 + Copy,
 {
+    if is_at_rest(vel) {
+        return gjk(support_a, support_b, 30).map(|_| (0.0, f32::INFINITY));
+    }
     // Find entry time
     let t_entry = conservative_advancement_toi(support_a, support_b, vel)?;
 
@@ -148,8 +152,9 @@ where
     F1: Fn(Vec2) -> Vec2,
     F2: Fn(Vec2) -> Vec2,
 {
-    if vel == Vec2::ZERO {
-        return gjk(support_a, support_b, 30).map(|_| 0.0);
+    // At rest, overlapping shapes have always overlapped
+    if is_at_rest(vel) {
+        return gjk(support_a, support_b, 30).map(|_| f32::NEG_INFINITY);
     }
 
     let vel_length = vel.length();
@@ -193,6 +198,9 @@ where
     F1: Fn(Vec2) -> Vec2 + Copy,
     F2: Fn(Vec2) -> Vec2 + Copy,
 {
+    if is_at_rest(vel) {
+        return gjk(support_a, support_b, 30).map(|_| (f32::NEG_INFINITY, f32::INFINITY));
+    }
     let t_entry = conservative_advancement_toi_unbounded(support_a, support_b, vel)?;
 
     // Find an upper bound for the exit time by doubling

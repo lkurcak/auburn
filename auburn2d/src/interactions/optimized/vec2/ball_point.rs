@@ -2,145 +2,53 @@ use crate::Vec2;
 use crate::collider::Collider;
 use crate::relation::cast::{
     TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
+    direction_and_speed, from_span, is_at_rest,
 };
 use crate::shape::{ball::Ball, point::Point};
 use crate::transformation::Transformation2d;
 
-impl TimeOfImpact<Collider<'_, Ball, Vec2>> for Collider<'_, Point, Vec2> {
-    fn toi(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<f32> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
+/// When a point at `p`, relative to the centre of a ball of `radius`, is in the ball while it
+/// moves at `vel`, over all of time (touching counts): from when to when, or `None` if never.
+/// At rest, a point in the ball is in it forever.
+fn point_ball_overlap(p: Vec2, radius: f32, vel: Vec2) -> Option<(f32, f32)> {
+    if is_at_rest(vel) {
+        return (p.length_squared() <= radius * radius)
+            .then_some((f32::NEG_INFINITY, f32::INFINITY));
+    }
+    // Along the path, in units of distance: the point passes closest to the centre at
+    // `-along`, `miss` away from it, and is in the ball for a half chord either side.
+    let (dir, speed) = direction_and_speed(vel);
+    let along = p.dot(dir);
+    let miss = p - dir * along;
+    let half_chord_squared = radius * radius - miss.length_squared();
+    if half_chord_squared < 0.0 {
+        return None;
+    }
+    let half_chord = half_chord_squared.sqrt();
+    Some(((-along - half_chord) / speed, (-along + half_chord) / speed))
+}
 
-        let dd = d.dot(d);
-        if dd < other.shape.radius * other.shape.radius {
-            return Some(0.0);
-        }
-
-        let a = vel.dot(vel);
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other.shape.radius * other.shape.radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            if t1 > 0.0 {
-                Some(t1)
-            } else if t2 > 0.0 {
-                Some(0.0)
-            } else {
-                None
+macro_rules! point_ball_impls {
+    ($($Trait:ident::$method:ident -> $Out:ty;)*) => {$(
+        impl $Trait<Collider<'_, Ball, Vec2>> for Collider<'_, Point, Vec2> {
+            fn $method(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<$Out> {
+                let p = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
+                from_span::$method(point_ball_overlap(p, other.shape.radius, vel))
             }
         }
-    }
-}
-impl TimeOfImpact<Collider<'_, Point, Vec2>> for Collider<'_, Ball, Vec2> {
-    fn toi(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<f32> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.toi(&b, vel)
-    }
-}
-impl TimeOfImpactAndExit<Collider<'_, Ball, Vec2>> for Collider<'_, Point, Vec2> {
-    fn toiae(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
-
-        let dd = d.dot(d);
-        let a = vel.dot(vel);
-        if !(1.0 / a).is_finite() {
-            // Not moving: inside stays inside
-            return (dd < other.shape.radius * other.shape.radius).then_some((0.0, f32::INFINITY));
-        }
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other.shape.radius * other.shape.radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            if t2 < 0.0 {
-                None
-            } else {
-                let toi = t1.max(0.0);
-                let toe = t2;
-                Some((toi, toe))
+        impl $Trait<Collider<'_, Point, Vec2>> for Collider<'_, Ball, Vec2> {
+            fn $method(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<$Out> {
+                // The ball's centre moves through a ball of the same radius around the point.
+                let p = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
+                from_span::$method(point_ball_overlap(p, self.shape.radius, vel))
             }
         }
-    }
+    )*};
 }
-impl TimeOfImpactAndExit<Collider<'_, Point, Vec2>> for Collider<'_, Ball, Vec2> {
-    fn toiae(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.toiae(&b, vel)
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Ball, Vec2>> for Collider<'_, Point, Vec2> {
-    fn tttoi(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<f32> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
 
-        let dd = d.dot(d);
-
-        let a = vel.dot(vel);
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other.shape.radius * other.shape.radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            Some(t1.min(t2))
-        }
-    }
-}
-impl TimeTravelingTimeOfImpact<Collider<'_, Point, Vec2>> for Collider<'_, Ball, Vec2> {
-    fn tttoi(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<f32> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.tttoi(&b, vel)
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Ball, Vec2>> for Collider<'_, Point, Vec2> {
-    fn tttoiae(&self, other: &Collider<'_, Ball, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let d = self.isometry.apply_to_origin() - other.isometry.apply_to_origin();
-
-        let dd = d.dot(d);
-
-        let a = vel.dot(vel);
-        let b = 2.0 * d.dot(vel);
-        let c = dd - other.shape.radius * other.shape.radius;
-
-        let discriminant = b * b - 4.0 * a * c;
-
-        if discriminant < 0.0 {
-            None
-        } else {
-            let sqrt_discriminant = discriminant.sqrt();
-            let t1 = (-b - sqrt_discriminant) / (2.0 * a);
-            let t2 = (-b + sqrt_discriminant) / (2.0 * a);
-
-            Some((t1, t2))
-        }
-    }
-}
-impl TimeTravelingTimeOfImpactAndExit<Collider<'_, Point, Vec2>> for Collider<'_, Ball, Vec2> {
-    fn tttoiae(&self, other: &Collider<'_, Point, Vec2>, vel: Vec2) -> Option<(f32, f32)> {
-        let a = Collider::new(&Point, self.isometry);
-        let b = Collider::new(self.shape, other.isometry);
-        a.tttoiae(&b, vel)
-    }
+point_ball_impls! {
+    TimeOfImpact::toi -> f32;
+    TimeOfImpactAndExit::toiae -> (f32, f32);
+    TimeTravelingTimeOfImpact::tttoi -> f32;
+    TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32);
 }
