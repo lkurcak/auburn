@@ -12,6 +12,9 @@
 1. [One generic shape cast replacing conservative advancement](backlog/generic-shape-cast.md)
 1. [Cast coverage through the generic cast](backlog/cast-coverage.md)
 1. Release 0.4.0.
+1. [Playground: try the 2D queries by hand, on the desktop and in the browser](backlog/playground.md)
+1. Publish the playground on GitHub Pages and link it from the README. Its `pages.yml` has to
+   be listed in auburn's `own_workflows` in forge-config, and Pages set to deploy from Actions.
 
 ## Later
 
@@ -27,6 +30,11 @@
 - `move_and_slide` helper for kinematic characters. Needs the cast result.
 - Small bevy plugin: collider components and a query `SystemParam`. The bevy example currently checks every pair.
 - Simple broadphase: a uniform grid or sort-and-sweep.
+- Playground: step through GJK and EPA, drawing the simplex and the polytope at each
+  iteration. Needs hooks in the algorithms, so after the generic shape cast.
+- Playground in 3D.
+- Save a playground scene as a PNG (egui_kittest snapshots), so an agent can look at a
+  failing randomized case.
 - glam 0.34, only once bevy depends on it. `forge deps` reports "Cargo.toml would have to change".
 - no_std. Tried and reverted in 2024; the CI no-std job exists but is skipped. Low priority.
 - `cargo test --no-default-features --features bevy` doesn't compile: `tests/randomized` in both

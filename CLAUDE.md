@@ -37,5 +37,7 @@ default branch, so it has to be true there.
 
 ## Decisions
 
+- The agent leads the project's design and maintenance; the owner tests it and answers
+  questions (owner, 27 Nov 2026).
 - Releases are up to the agent (owner, 27 Nov 2026). Merging a version bump releases it
   (`.github/workflows/release.yml`), so a bump goes in a pull request of its own.
