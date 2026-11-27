@@ -158,6 +158,15 @@ mod collides {
             Poly2d-Poly2d, Poly2d-Shape2d, Shape2d-Shape2d
         ]
     );
+    static_test!(
+        #[cfg(feature = "bevy")]
+        bevy_transform_mirrored: collides @ bevy::prelude::Transform, Config::MIRRORED,
+        [
+            Point-Point, Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball,
+            Ball-Box2d, Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d,
+            Poly2d-Poly2d, Poly2d-Shape2d, Shape2d-Shape2d
+        ]
+    );
 }
 
 mod penetrates {
@@ -237,6 +246,15 @@ mod penetrates {
     static_test!(
         #[cfg(feature = "bevy")]
         bevy_transform: penetrates @ bevy::prelude::Transform, Config::BASE,
+        [
+            Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
+            Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,
+            Poly2d-Shape2d, Shape2d-Shape2d
+        ]
+    );
+    static_test!(
+        #[cfg(feature = "bevy")]
+        bevy_transform_mirrored: penetrates @ bevy::prelude::Transform, Config::MIRRORED,
         [
             Point-Ball, Point-Box2d, Point-Poly2d, Point-Shape2d, Ball-Ball, Ball-Box2d,
             Ball-Poly2d, Ball-Shape2d, Box2d-Box2d, Box2d-Poly2d, Box2d-Shape2d, Poly2d-Poly2d,

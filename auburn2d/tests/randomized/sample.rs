@@ -276,19 +276,26 @@ impl Place for Transform2d {
 #[cfg(feature = "bevy")]
 impl Place for bevy::prelude::Transform {
     const NAME: &'static str = "bevy Transform";
+    /// Mirrored, it flips x and y independently, so it can mirror one axis, which
+    /// `Transform2d` can't. The z translation and z scale are random, and shouldn't matter.
     fn sample(rng: &mut Rng, cfg: &Config) -> Self {
         let pos = cfg.position(rng);
         let rotation = z_rotation(cfg.rotation(rng));
-        let scale = cfg.scale(rng);
+        let x = cfg.scale(rng);
+        let y = match cfg.scale {
+            Scale::Mirrored if rng.chance(0.5) => -x,
+            _ => x,
+        };
+        let z = rng.range(-5.0, 5.0);
         bevy::prelude::Transform {
-            translation: pos.extend(0.0),
+            translation: pos.extend(z),
             rotation,
-            scale: auburn2d::Vec3::splat(scale),
+            scale: auburn2d::Vec3::new(x, y, rng.range(0.1, 5.0)),
         }
     }
     fn world(&self, p: Vec2) -> DVec2 {
         let (w, z) = (f64::from(self.rotation.w), f64::from(self.rotation.z));
-        let p = wide(p) * f64::from(self.scale.x);
+        let p = wide(p) * wide(self.scale.truncate());
         let norm = w * w + z * z;
         let cos_sin = ((w * w - z * z) / norm, 2.0 * w * z / norm);
         rotate(cos_sin, p) + wide(self.translation.truncate())
