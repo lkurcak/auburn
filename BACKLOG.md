@@ -2,7 +2,6 @@
 
 ## Now
 
-1. Release 0.4.0.
 1. [Playground: try the 2D queries by hand, on the desktop and in the browser](backlog/playground.md)
 1. Publish the playground on GitHub Pages and link it from the README. Its `pages.yml` has to
    be listed in auburn's `own_workflows` in forge-config, and Pages set to deploy from Actions.
@@ -42,6 +41,7 @@
 
 ## Done
 
+- Released 0.4.0 on crates.io: auburn2d and auburn3d, with every fix and the any-two-colliders casts since 0.3.3 (#33)
 - Any two colliders cast, whatever their shapes and transformations, mixed ones too: one generic impl per cast, with exact formulas for points, balls, boxes and polygons (in 3D: points, balls, and points against boxes) and the GJK ray cast for the rest; `Shape::primitive` and `rotation_and_scale` tell when a shape keeps its form; the ~70 hand-written per-pair impls are gone (#32)
 - 3D casts without an exact formula, every pair with a `Box3d`, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`, with a ball as its centre and radius: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; `Transform3d` Point and Ball pairs use the exact `Vec3` casts; conservative advancement is gone (#31)
 - 2D casts without an exact formula, Ball–Poly2d so far, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; conservative advancement is gone from 2D (#30)
@@ -51,4 +51,3 @@
 - Ball and point casts read off one overlap span: no NaN at rest, negative time-traveling times in 3D, tiny velocities, Point–Point through-paths; the at-rest answers are documented and every pair gives them (#26)
 - `Transform2d` ball casts scale each radius once, by its own |scale|, and ball `toiae` gives the exit when starting inside; box casts take |scale| too (#25)
 - 2D EPA returns the shortest support distance it finds, so deep, near-concentric balls get their depth and direction (#24)
-- 3D GJK searches from the part of its simplex nearest the origin, so it no longer cycles and misses shallow overlaps (#23)
