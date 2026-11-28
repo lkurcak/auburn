@@ -16,6 +16,7 @@ around and see what each query answers.
 - [`auburn2d`](./auburn2d) — 2D collision detection and physics
 - [`auburn3d`](./auburn3d) — 3D collision detection and physics
 - [`playground`](./playground) — try auburn2d's queries by hand, on the desktop and in the browser
+- [`benches`](./benches) — how fast the basic queries are, next to parry and the formula a game writes by hand
 
 The previous `auburn` crate has been deprecated and split into `auburn2d` and `auburn3d`. Use those crates directly.
 
