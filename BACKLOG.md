@@ -8,11 +8,16 @@
 1. Exact `collides` and `penetrates` for the pairs the casts have formulas for. Both run GJK
    (and EPA) for every pair today: two balls at `Vec2` positions take about 12 ns to
    `collides` and 56 ns to `penetrates`, the formula about 1 ns (a quick timing, not a benchmark).
+1. Playground: a bullet-hell demo to play, in the browser too. Thousands of fast bullets cast
+   against the player every frame, with the frame time on screen. It's the hot path under load,
+   and it shows how little code a game needs.
 1. The same cast result in 3D: `a.cast(&b, vel)` and `CastHit`, as 2D has them (#37), with the
    randomized check against the true contact.
 1. Review the cast traits before 1.0: whether `toiae`, `tttoi` and `tttoiae` earn their place
    next to `cast` and `toi`.
 1. `move_and_slide` helper for kinematic characters. Needs the cast result.
+1. Playground: a platformer demo on `move_and_slide`: run, jump, slide along walls and over the
+   seams between boxes, with slow motion and the contacts drawn, to check it feels right.
 
 ## Later
 
