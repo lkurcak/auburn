@@ -2,7 +2,7 @@
 //!
 //! A cast whose path runs exactly along one of a box's edge lines (or exactly a radius away
 //! from one) used to compute `0 * inf = NaN` and miss. Every case here is checked for each cast
-//! function, both argument orders, `Vec2` and `Transform2d` positions, all four directions and
+//! function, `cast` against `toi`, both argument orders, `Vec2` and `Transform2d` positions, all four directions and
 //! both signs of zero.
 
 use auburn2d::prelude::*;
@@ -82,7 +82,13 @@ fn forward(exp: Expected) -> Expected {
     exp.and_then(|(enter, exit)| (exit >= 0.0).then_some((enter.max(0.0), exit)))
 }
 
-/// Checks `toi` and `toiae`, both ways round (the reverse as the target moving the other way).
+/// Checks that `cast` hits when `toi` does, at the same time.
+fn check_cast(name: &str, what: &str, hit: Option<CastHit>, toi: Option<f32>) {
+    assert_eq!(hit.map(|hit| hit.time), toi, "{name}: {what}: {hit:?}");
+}
+
+/// Checks `toi`, `toiae` and `cast`, both ways round (the reverse as the target moving the
+/// other way).
 macro_rules! check_forward {
     ($name:expr, $mover:expr, $target:expr, $vel:expr, $exp:expr) => {{
         let (mover, target, vel, exp): (_, _, Vec2, Expected) = ($mover, $target, $vel, $exp);
@@ -100,6 +106,14 @@ macro_rules! check_forward {
             target.toiae(&mover, -vel),
             forward(exp),
         );
+        check_cast(
+            $name,
+            "cast",
+            mover.cast(&target, vel),
+            mover.toi(&target, vel),
+        );
+        let (hit, toi) = (target.cast(&mover, -vel), target.toi(&mover, -vel));
+        check_cast($name, "reversed cast", hit, toi);
     }};
 }
 

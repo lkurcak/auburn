@@ -690,3 +690,40 @@ fn curved_penetration_is_exact() {
         );
     }
 }
+
+/// The casts of points and balls square the speed, which underflows below about 1e-19 and
+/// overflows above about 1e19. Those go in units of the velocity's largest component instead,
+/// and a velocity too small for its reciprocal to be finite is at rest.
+#[test]
+fn ball_casts_at_any_speed() {
+    let (z, ball) = (Vec2::ZERO, Ball::new(1.0));
+    let (head_on, beside) = (Vec2::new(-3.0, 0.0), Vec2::new(-3.0, 1.5));
+    for speed in [1e-30_f32, 1e-20, 1.0, 1e20, 1e30] {
+        for dir in [Vec2::X, Vec2::new(1.0, 0.01).normalize()] {
+            let vel = dir * speed;
+            // How far it goes before it is `radius` from the center.
+            let reach = |radius: f32| 3.0 * dir.x - (radius * radius - 9.0 * dir.y * dir.y).sqrt();
+            let toi = Point.at(&head_on).toi(&ball.at(&z), vel);
+            let distance = toi.map(|t| t * speed);
+            assert!(
+                distance.is_some_and(|d| (d - reach(1.0)).abs() < 1e-5),
+                "{vel}: {toi:?}"
+            );
+            let hit = ball.at(&head_on).cast(&ball.at(&z), vel);
+            let distance = hit.map(|hit| hit.time * speed);
+            assert!(
+                distance.is_some_and(|d| (d - reach(2.0)).abs() < 1e-5),
+                "{vel}: {hit:?}"
+            );
+            assert!(
+                (hit.unwrap().normal - Vec2::NEG_X).length() < 1e-2,
+                "{hit:?}"
+            );
+            // Past it, a half beside, it misses.
+            assert_eq!(Point.at(&beside).toi(&ball.at(&z), vel), None, "{vel}");
+        }
+    }
+    let at_rest = Vec2::new(1e-40, 0.0);
+    assert_eq!(Point.at(&head_on).toi(&ball.at(&z), at_rest), None);
+    assert_eq!(ball.at(&head_on).cast(&ball.at(&z), at_rest), None);
+}

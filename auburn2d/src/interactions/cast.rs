@@ -1,29 +1,38 @@
 //! The casts between any two colliders, whatever their shapes and transformations.
 //!
-//! Every cast reads its answer off [`span`]: when `a`, moving at `vel`, overlaps `b`, over all
-//! of time. Built-in shapes that their transformations keep as they are (see
-//! [`Shape::primitive`] and [`Transformation2d::rotation_and_scale`]) have exact formulas:
-//! points, balls and boxes against each other, and polygons against points, boxes and
-//! polygons. Every other pair goes through [`rounded_shape_cast`], on the colliders' support
-//! functions, with a ball as its centre rounded by its radius: a ball against a polygon, and
-//! any shape without a primitive or under a transformation without a rotation and scale.
+//! Built-in shapes that their transformations keep as they are (see [`Shape::primitive`] and
+//! [`Transformation2d::rotation_and_scale`]) have exact formulas: points, balls and boxes
+//! against each other, and polygons against points, boxes and polygons. Every other pair goes
+//! through [`rounded_shape_cast`], on the colliders' support functions, with a ball as its
+//! center rounded by its radius: a ball against a polygon, and any shape without a primitive
+//! or under a transformation without a rotation and scale.
 //!
-//! [`Cast::cast`] reads the same span, with the normal where it starts, in [`hit`]. If the
-//! shapes overlap already, it parts them by the shortest move instead, as
+//! [`TimeOfImpact::toi`] and [`Cast::cast`] look only forward, from now on, and only for the
+//! first touch, as a game's own formula would: [`touch`] gives it, with the contact's normal,
+//! which `toi` doesn't use and the compiler leaves out. The other casts read their answers off
+//! [`span`]: when `a`, moving at `vel`, overlaps `b`, over all of time.
+//!
+//! If the shapes overlap already, [`Cast::cast`] parts them by the shortest move instead, as
 //! [`Penetrates`](crate::relation::penetrates::Penetrates) does, in
 //! [`generic`](super::generic). Either way, [`contact_point`] finds where they touch.
 //!
 //! None of the formulas has a tolerance to tune for the shapes' size. Boxes turned the same
 //! way, as boxes that don't rotate are, take the fewest steps.
 //!
-//! The formulas are `#[inline]`: without it they aren't inlined into the crate that casts,
-//! and the cheapest casts take twice as long.
+//! The formulas are `#[inline]`: without it they aren't inlined into the crate that casts.
+//! Those of `toi` and `cast` for the basic pairs, the matches on the pair's forms and the
+//! forms themselves are `#[inline(always)]`, as LLVM keeps some of them as calls otherwise, in
+//! a caller as large as `cast`. A call hides which pair it is, so every other pair's code
+//! stays too, and the cheapest casts take three times as long. What only polygons and turned
+//! boxes need is kept out of line.
 
 use crate::Vec2;
 use crate::algorithm::toi::{Radii, nearest_to_origin, rounded_shape_cast, sweep};
 use crate::algorithm::{epa, gjk};
 use crate::collider::Collider;
-use crate::interactions::generic::{ball_in_rect, in_ball, penetration};
+use crate::interactions::generic::{
+    ball_in_rect, in_ball, in_rounded_aabb, length_and_direction, penetration,
+};
 use crate::property::support::Support;
 use crate::relation::cast::{
     Cast, CastHit, TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact,
@@ -51,10 +60,25 @@ macro_rules! casts {
 }
 
 casts! {
-    TimeOfImpact::toi -> f32;
     TimeOfImpactAndExit::toiae -> (f32, f32);
     TimeTravelingTimeOfImpact::tttoi -> f32;
     TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32);
+}
+
+impl<S1, S2, T1, T2> TimeOfImpact<Collider<'_, S2, T2>> for Collider<'_, S1, T1>
+where
+    S1: Shape + Support,
+    S2: Shape + Support,
+    T1: Transformation2d,
+    T2: Transformation2d,
+{
+    fn toi(&self, other: &Collider<'_, S2, T2>, vel: Vec2) -> Option<f32> {
+        let (x, y) = (Form::of(self), Form::of(other));
+        match touch(&x, &y, vel) {
+            Some(touch) => touch.map(Touch::time),
+            None => from_span::toi(support_span(self, other, &x, &y, vel)),
+        }
+    }
 }
 
 impl<S1, S2, T1, T2> Cast<Collider<'_, S2, T2>> for Collider<'_, S1, T1>
@@ -86,16 +110,32 @@ where
     let (x, y) = (Form::of(a), Form::of(b));
     match exact(&x, &y, vel) {
         Some(span) => span.map(|span| (span.entry, span.exit)),
-        None => {
-            let origin = y.origin(b);
-            let (core_a, core_b) = (x.core(a, origin), y.core(b, origin));
-            rounded_shape_cast(core_a, core_b, radii(&x, &y), vel)
-        }
+        None => support_span(a, b, &x, &y, vel),
     }
 }
 
+/// [`span`] through the support functions of the colliders' cores, `x` and `y` being their
+/// forms.
+fn support_span<S1, S2, T1, T2>(
+    a: &Collider<'_, S1, T1>,
+    b: &Collider<'_, S2, T2>,
+    x: &Form<'_>,
+    y: &Form<'_>,
+    vel: Vec2,
+) -> Option<(f32, f32)>
+where
+    S1: Shape + Support,
+    S2: Shape + Support,
+    T1: Transformation2d,
+    T2: Transformation2d,
+{
+    let origin = y.origin(b);
+    let (core_a, core_b) = (x.core(a, origin), y.core(b, origin));
+    rounded_shape_cast(core_a, core_b, radii(x, y), vel)
+}
+
 /// When and how `a`, moving at `vel`, first touches `b` from now on: see [`Cast::cast`].
-#[inline]
+#[inline(always)]
 fn hit<S1, S2, T1, T2>(
     a: &Collider<'_, S1, T1>,
     b: &Collider<'_, S2, T2>,
@@ -108,7 +148,7 @@ where
     T2: Transformation2d,
 {
     let (x, y) = (Form::of(a), Form::of(b));
-    let Some(span) = exact(&x, &y, vel) else {
+    let Some(touch) = touch(&x, &y, vel) else {
         let origin = y.origin(b);
         let (core_a, core_b) = (x.core(a, origin), y.core(b, origin));
         let hit = support_hit(core_a, core_b, radii(&x, &y), vel)?;
@@ -117,23 +157,42 @@ where
             ..hit
         });
     };
-    let span = span.filter(|span| span.exit >= 0.0)?;
-    if span.entry >= 0.0 {
-        let normal = unit(span.normal).unwrap_or_else(|| against(vel));
-        let point = contact_point(&x, &y, span.entry * vel, normal);
-        return Some(CastHit {
-            // As `toi` has it.
-            time: span.entry.max(0.0),
+    Some(match touch? {
+        Touch::At { time, normal } => CastHit {
+            time,
             normal,
-            point,
-        });
-    }
-    let (normal, depth) = penetration(&x, &y, vel);
-    let point = contact_point(&x, &y, depth * normal, normal);
-    Some(CastHit {
-        time: 0.0,
-        normal,
-        point,
+            point: contact_point(&x, &y, time * vel, normal),
+        },
+        Touch::Overlapping => {
+            let (normal, depth) = penetration(&x, &y, vel);
+            CastHit {
+                time: 0.0,
+                normal,
+                point: contact_point(&x, &y, depth * normal, normal),
+            }
+        }
+    })
+}
+
+/// How `a`, moving at `vel`, first touches `b` from now on, by the pair's exact formula:
+/// `None` if it has none, and `Some(None)` if they never touch from now on.
+#[inline(always)]
+fn touch(a: &Form<'_>, b: &Form<'_>, vel: Vec2) -> Option<Option<Touch>> {
+    use Form::{Ball, Point, Polygon, Rect};
+    Some(match (a, b) {
+        (Point(p), Point(q)) => Touch::from_span(point_point(*p, *q, vel), vel),
+        (Point(p), Ball(q, r)) | (Ball(p, r), Point(q)) => point_ball_touch(*p - *q, *r, vel),
+        (Ball(p, r), Ball(q, s)) => point_ball_touch(*p - *q, r + s, vel),
+        (Ball(p, r), Rect(rect)) => ball_rect_touch(*p, *r, rect, vel),
+        // `b` moving at `-vel` is `a` moving at `vel`.
+        (Rect(rect), Ball(p, r)) => ball_rect_touch(*p, *r, rect, -vel).map(Touch::swapped),
+        (Point(p), Rect(rect)) => aligned_touch(*p, rect.half, rect, vel),
+        (Rect(rect), Point(p)) => aligned_touch(*p, rect.half, rect, -vel).map(Touch::swapped),
+        (Rect(r), Rect(s)) => rect_rect_touch(r, s, vel),
+        (Point(_) | Rect(_) | Polygon(_), Point(_) | Rect(_) | Polygon(_)) => {
+            Touch::from_span(separating_axes(a, b, vel), vel)
+        }
+        _ => return None,
     })
 }
 
@@ -161,24 +220,41 @@ fn exact(a: &Form<'_>, b: &Form<'_>, vel: Vec2) -> Option<Option<Span>> {
 
 /// A point where `a`, moved by `shift`, touches `b`, with `normal` the contact's normal. Only
 /// for pairs with an exact formula.
+#[inline(always)]
 fn contact_point(a: &Form<'_>, b: &Form<'_>, shift: Vec2, normal: Vec2) -> Vec2 {
-    use Form::{Ball, Point};
+    use Form::{Ball, Point, Rect};
     match (a, b) {
         (_, Point(q)) => *q,
         (Point(p), _) => *p + shift,
         (_, Ball(q, r)) => *q + normal * *r,
         (Ball(p, r), _) => *p + shift - normal * *r,
-        _ => {
-            // Where the side or corner of each that faces the other overlap, along the
-            // contact: the middle of it, on `b`'s side.
-            let across = normal.perp();
-            let offset = (a.anchor() - b.anchor() + shift).dot(across);
-            let (b_lo, b_hi, level) = b.facing(normal, across);
-            let (a_lo, a_hi, _) = a.facing(-normal, across);
-            let (lo, hi) = (b_lo.max(a_lo + offset), b_hi.min(a_hi + offset));
-            b.anchor() + normal * level + across * (0.5 * (lo + hi))
-        }
+        (Rect(r), Rect(s)) => rect_contact_point(r, s, shift, normal),
+        _ => facing_point(a, b, shift, normal),
     }
+}
+
+/// [`contact_point`] for two boxes.
+#[inline(always)]
+fn rect_contact_point(a: &Rect, b: &Rect, shift: Vec2, normal: Vec2) -> Vec2 {
+    if a.rot != b.rot {
+        return facing_point(&Form::Rect(*a), &Form::Rect(*b), shift, normal);
+    }
+    // In `b`'s frame, the middle of where they overlap: on its side, as they touch.
+    let center = b.local(a.centre + shift);
+    let lo = (center - a.half).max(-b.half);
+    let hi = (center + a.half).min(b.half);
+    b.centre + b.in_world(0.5 * (lo + hi))
+}
+
+/// [`contact_point`] for boxes turned different ways and polygons: where the side or corner
+/// of each that faces the other overlap, along the contact, the middle of it, on `b`'s side.
+fn facing_point(a: &Form<'_>, b: &Form<'_>, shift: Vec2, normal: Vec2) -> Vec2 {
+    let across = normal.perp();
+    let offset = (a.anchor() - b.anchor() + shift).dot(across);
+    let (b_lo, b_hi, level) = b.facing(normal, across);
+    let (a_lo, a_hi, _) = a.facing(-normal, across);
+    let (lo, hi) = (b_lo.max(a_lo + offset), b_hi.min(a_hi + offset));
+    b.anchor() + normal * level + across * (0.5 * (lo + hi))
 }
 
 /// The radii that round the cores of `a` and `b` in a cast through support functions: a
@@ -269,6 +345,62 @@ where
     Some(exit.normal)
 }
 
+/// How `a`, moving at `vel`, first touches `b` from now on.
+#[derive(Clone, Copy)]
+enum Touch {
+    /// They overlap already, touching counts: at time 0.
+    Overlapping,
+    /// They first touch at `time`, from now on (`time >= 0`), with `normal` the contact's
+    /// normal, a unit vector out of `b`.
+    At { time: f32, normal: Vec2 },
+}
+
+impl Touch {
+    /// When they first touch, from now on.
+    fn time(self) -> f32 {
+        match self {
+            Touch::Overlapping => 0.0,
+            Touch::At { time, .. } => time,
+        }
+    }
+
+    /// How `b`, moving at `-vel`, first touches `a`, from how `a`, moving at `vel`, first
+    /// touches `b`: at the same time, with the normal out of the other shape.
+    fn swapped(self) -> Self {
+        match self {
+            Touch::Overlapping => Touch::Overlapping,
+            Touch::At { time, normal } => Touch::At {
+                time,
+                normal: -normal,
+            },
+        }
+    }
+
+    /// The same touch, with its normal from `rect`'s frame turned back into the world.
+    fn in_world(self, rect: &Rect) -> Self {
+        match self {
+            Touch::Overlapping => Touch::Overlapping,
+            Touch::At { time, normal } => Touch::At {
+                time,
+                normal: rect.in_world(normal),
+            },
+        }
+    }
+
+    /// The first touch from now on, from the span of a cast at `vel` over all of time.
+    fn from_span(span: Option<Span>, vel: Vec2) -> Option<Self> {
+        let span = span.filter(|span| span.exit >= 0.0)?;
+        Some(if span.entry >= 0.0 {
+            Touch::At {
+                time: span.entry,
+                normal: unit(span.normal).unwrap_or_else(|| against(vel)),
+            }
+        } else {
+            Touch::Overlapping
+        })
+    }
+}
+
 /// When `a`, moving at `vel`, overlaps `b`, over all of time, and how they touch as it starts.
 #[derive(Clone, Copy)]
 struct Span {
@@ -324,7 +456,7 @@ pub(super) struct Polygon<'a> {
 }
 
 impl<'a> Form<'a> {
-    #[inline]
+    #[inline(always)]
     pub(super) fn of<S: Shape, T: Transformation2d>(c: &Collider<'a, S, T>) -> Self {
         let at = c.isometry.apply_to_origin();
         let shape = c.shape.primitive();
@@ -445,7 +577,7 @@ impl<'a> Form<'a> {
 
 impl Rect {
     /// A point at `p`, as a box turned like this one.
-    #[inline]
+    #[inline(always)]
     pub(super) fn point(&self, p: Vec2) -> Rect {
         Rect {
             centre: p,
@@ -455,7 +587,7 @@ impl Rect {
     }
 
     /// The point `p` in the box's frame: from its centre, turned with it.
-    #[inline]
+    #[inline(always)]
     pub(super) fn local(&self, p: Vec2) -> Vec2 {
         let p = p - self.centre;
         if self.rot == Rotor2d::IDENTITY {
@@ -465,9 +597,19 @@ impl Rect {
         }
     }
 
+    /// A vector `v` in the box's frame, turned back into the world.
+    #[inline(always)]
+    pub(super) fn in_world(&self, v: Vec2) -> Vec2 {
+        if self.rot == Rotor2d::IDENTITY {
+            v
+        } else {
+            self.rot * v
+        }
+    }
+
     /// The point `p` and the velocity `vel` in the box's frame: from its centre, turned with
     /// it.
-    #[inline]
+    #[inline(always)]
     fn in_frame(&self, p: Vec2, vel: Vec2) -> (Vec2, Vec2) {
         let p = self.local(p);
         if self.rot == Rotor2d::IDENTITY {
@@ -529,6 +671,163 @@ fn point_ball(p: Vec2, radius: f32, vel: Vec2) -> Option<Span> {
     })
 }
 
+/// How a point at `p`, relative to the center of a ball of `radius`, first touches it from now
+/// on, while it moves at `vel`.
+///
+/// It is in the ball while `|p + vel t|² <= radius²`, and the smaller root of that quadratic
+/// is when it enters.
+#[inline(always)]
+fn point_ball_touch(p: Vec2, radius: f32, vel: Vec2) -> Option<Touch> {
+    let c = p.length_squared() - radius * radius;
+    if c <= 0.0 {
+        return Some(Touch::Overlapping);
+    }
+    let time = point_ball_entry(p, c, radius, vel)?;
+    // Where it enters, out from the center.
+    let normal = match length_and_direction(p + vel * time) {
+        Some((_, normal)) => normal,
+        None => against(vel),
+    };
+    Some(Touch::At { time, normal })
+}
+
+/// When a point at `p` outside a ball of `radius` enters it, moving at `vel`, from now on:
+/// [`point_ball_touch`], with `c` the square of its distance from the center less the
+/// radius's.
+#[inline(always)]
+fn point_ball_entry(p: Vec2, c: f32, radius: f32, vel: Vec2) -> Option<f32> {
+    let (speed_squared, entry) = chord_entry(p, c, radius, vel);
+    if !speed_squared.is_normal() {
+        return point_ball_entry_scaled(p, c, radius, vel);
+    }
+    entry
+}
+
+/// [`point_ball_entry`] at a speed whose square isn't a normal number: too slow or too fast,
+/// so in units of its largest component, or at rest.
+#[cold]
+#[inline(never)]
+fn point_ball_entry_scaled(p: Vec2, c: f32, radius: f32, vel: Vec2) -> Option<f32> {
+    if is_at_rest(vel) {
+        return None;
+    }
+    let largest = vel.abs().max_element();
+    let (_, entry) = chord_entry(p, c, radius, vel / largest);
+    Some(entry? / largest)
+}
+
+/// [`point_ball_entry`], right if the square of the speed, which it gives too, is a normal
+/// number.
+#[inline(always)]
+fn chord_entry(p: Vec2, c: f32, radius: f32, vel: Vec2) -> (f32, Option<f32>) {
+    let along = p.dot(vel);
+    let speed_squared = vel.length_squared();
+    // The square of the half chord, times `speed_squared`. The distance by which the path
+    // misses the center is from the cross product, which stays precise however far away the
+    // point starts.
+    let miss = p.perp_dot(vel);
+    let half_chord_squared = speed_squared * (radius * radius) - miss * miss;
+    // The smaller root, in the form that doesn't cancel.
+    let time = c / (half_chord_squared.sqrt() - along);
+    // Moving away from the center, or across, it never gets nearer.
+    let enters = along < 0.0 && half_chord_squared >= 0.0;
+    (speed_squared, enters.then_some(time))
+}
+
+/// When a point at `p`, moving at `vel`, first touches the box at the origin with half size
+/// `half`, from now on (touching counts): the time, 0 if it is in the box already, and the
+/// normal out of the side it enters through then. `None` if never.
+///
+/// It is the slab test, read from now on: the point is in the box while it is between the
+/// two sides of each axis, and it reaches first the side it moves towards. Along an axis it
+/// doesn't move along, the reciprocal of its velocity is infinite, and so is the time to each
+/// side, but where it starts on a side, 0 × ∞ is NaN, which `max` and `min` skip: it touches
+/// that side all along. Which side is which goes by the velocity's sign, zeros too, with no
+/// branch: random signs would mispredict one.
+#[inline(always)]
+fn point_aabb_entry(p: Vec2, half: Vec2, vel: Vec2) -> Option<(f32, Vec2)> {
+    let inv = vel.recip();
+    let side = half.copysign(inv);
+    let (near, far) = ((-side - p) * inv, (side - p) * inv);
+    let last = near.x.max(near.y);
+    let entry = last.max(0.0);
+    // At rest outside the box, every time is infinite: `f32::MAX` keeps the entry from fitting
+    // before the exit.
+    let exit = f32::MAX.min(far.x).min(far.y);
+    if entry > exit {
+        return None;
+    }
+    // Out of the side it enters through, against its velocity.
+    let out = -Vec2::ONE.copysign(inv);
+    let normal = if near.x == last {
+        Vec2::new(out.x, 0.0)
+    } else {
+        Vec2::new(0.0, out.y)
+    };
+    Some((entry, normal))
+}
+
+/// How box `a`, moving at `vel`, first touches box `b` from now on.
+#[inline(always)]
+fn rect_rect_touch(a: &Rect, b: &Rect, vel: Vec2) -> Option<Touch> {
+    if a.rot != b.rot {
+        return turned_rect_rect_touch(a, b, vel);
+    }
+    // Turned the same way, `a` overlaps `b` while its center is in a box with both half sizes.
+    aligned_touch(a.centre, a.half + b.half, b, vel)
+}
+
+/// [`rect_rect_touch`] for boxes turned different ways, by the separating axis theorem.
+fn turned_rect_rect_touch(a: &Rect, b: &Rect, vel: Vec2) -> Option<Touch> {
+    Touch::from_span(separating_axes(&Form::Rect(*a), &Form::Rect(*b), vel), vel)
+}
+
+/// How a point at `p`, moving at `vel`, first touches a box turned as `rect` is, at its center,
+/// with half size `half`, from now on.
+#[inline(always)]
+fn aligned_touch(p: Vec2, half: Vec2, rect: &Rect, vel: Vec2) -> Option<Touch> {
+    let (p, vel) = rect.in_frame(p, vel);
+    let (time, normal) = point_aabb_entry(p, half, vel)?;
+    Some(if time == 0.0 {
+        Touch::Overlapping
+    } else {
+        Touch::At {
+            time,
+            normal: rect.in_world(normal),
+        }
+    })
+}
+
+/// How a ball at `center`, moving at `vel`, first touches `rect` from now on.
+///
+/// Its center then enters the rounded box of [`ball_rect`]. It enters the box widened by
+/// `radius` first, and if that is in a corner square, it enters the rounded box through the
+/// corner's disc, or not at all.
+#[inline(always)]
+fn ball_rect_touch(center: Vec2, radius: f32, rect: &Rect, vel: Vec2) -> Option<Touch> {
+    let half = rect.half;
+    let (p, vel) = rect.in_frame(center, vel);
+    // As `Collides` has it, so that casts at rest agree with it.
+    if in_rounded_aabb(p, half, radius) {
+        return Some(Touch::Overlapping);
+    }
+    let (time, normal) = point_aabb_entry(p, half + radius, vel)?;
+    let q = p + vel * time;
+    if q.x.abs() > half.x && q.y.abs() > half.y {
+        let touch = point_ball_touch(p - half.copysign(q), radius, vel)?;
+        return Some(touch.in_world(rect));
+    }
+    // Along a side, it is in the widened box at time 0 only by rounding: at rest, apart, as
+    // `Collides` finds it.
+    if time == 0.0 && is_at_rest(vel) {
+        return None;
+    }
+    Some(Touch::At {
+        time,
+        normal: rect.in_world(normal),
+    })
+}
+
 /// When a point at `p`, moving at `vel`, is in the box at the origin with half size `half`,
 /// over all of time (touching counts): from when to when, or `None` if never.
 #[inline]
@@ -555,7 +854,7 @@ fn rect_rect(a: &Rect, b: &Rect, vel: Vec2) -> Option<Span> {
     if a.rot != b.rot {
         return separating_axes(&Form::Rect(*a), &Form::Rect(*b), vel);
     }
-    // Turned the same way, `a` overlaps `b` while its centre is in a box with both half sizes.
+    // Turned the same way, `a` overlaps `b` while its center is in a box with both half sizes.
     let (p, vel) = b.in_frame(a.centre, vel);
     let span = point_aabb(p, a.half + b.half, vel)?;
     Some(Span {

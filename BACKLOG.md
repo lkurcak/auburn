@@ -2,9 +2,11 @@
 
 ## Now
 
-1. [The basic pairs' casts and `penetrates` as fast as the formula](backlog/fast-casts.md): in
-   2D `toi` takes 4 to 8 times its time, `cast` 2 to 4 and `penetrates` 4 to 7, and 3D casts a
-   box against a ball or a box through GJK, at 50 times the slab test for two boxes.
+1. [`penetrates` for the basic pairs as fast as the formula](backlog/fast-penetrates.md): it
+   takes up to 5 times its time, in 2D and in 3D.
+1. [3D casts of the basic pairs as fast as the formula](backlog/fast-casts.md): `toi` takes 2
+   to 4.5 times its time for points and balls, and a box against a ball or a box goes through
+   GJK, at 50 times the slab test for two boxes.
 1. Playground: a bullet-hell demo to play, in the browser too. Thousands of fast bullets cast
    against the player every frame, with the frame time on screen. It's the hot path under load,
    and it shows how little code a game needs.
@@ -24,6 +26,8 @@
 - Segment shape and a ray query API.
 - More shapes in the enums: `Poly2d` in `Shape2d`; a 3D convex hull/polyhedron shape and a `Shape3d` enum.
 - Cleanup: remove `derive_type::Wrapper` (deprecated since 0.1.0), the commented-out code, and duplicated iteration constants.
+- American spelling throughout: `centre` is still in identifiers, such as the `centre` fields of
+  the casts' `Rect` and `Cuboid`, and in older comments.
 - [Performance](backlog/performance.md): GJK, EPA and the casts that have no formula.
 - [Docs: README examples and missing docs](backlog/docs.md)
 - Playground: step through GJK and EPA, drawing the simplex and the polytope at each
@@ -51,6 +55,9 @@
 - `penetrates` through EPA, for a ball under an uneven scale or a curved shape of the game's
   own, is off on the curve by about the square root of EPA's tolerance: up to 3e-3 rad in 2D.
   A ball could go as its centre and radius, as the casts do.
+- 2D point–ball and ball–ball `toi` take about twice the formula's time, 2.4 for ball–ball
+  under `Transform2d`. Most of it is the check that the square of the speed is a normal
+  number, which the formula skips and gets wrong below about 1e-19 and above 1e19.
 
 ### Above the base layer, once it's right
 
@@ -61,6 +68,7 @@
 
 ## Done
 
+- 2D `toi` and `cast` for points, balls and boxes are 2 to 7 times faster, at 0.7 to 2.4 times the formula's time where they took 2 to 8.5: forward-only formulas that find only the first touch, inlined whole, and a branchless slab test (#43)
 - Exact `collides` and `penetrates` for points, balls, boxes and polygons in 2D, and points, balls and boxes in 3D except two boxes turned different ways; GJK and EPA for the rest. `collides` is as fast as the formula, `penetrates` 1 to 7 times it (it was up to 1300), and exact where EPA was off by up to 3e-3 rad in 2D and 7% in 3D (#42)
 - Benchmarks, `cargo bench -p auburn-benches`: `collides`, `penetrates`, `toi` and 2D `cast` between points, balls and boxes, at positions and turned, next to parry and the hand-written formula, which have to agree before anything is timed (#40)
 - What auburn is for, under Decisions in `CLAUDE.md`, with a Design section on performance and edge cases; Now starts with benchmarks and exact `collides`/`penetrates`; the descriptions say collision queries for games that do their own movement and physics (#38)
@@ -70,5 +78,3 @@
 - Playground (`cargo run -p auburn-playground`, or `trunk serve` in `playground/`): drag a point, a ball, a box and a polygon, see each query's answers and ghosts, copy a pair as a test, and keep the scene in the page's URL (#34)
 - Released 0.4.0 on crates.io: auburn2d and auburn3d, with every fix and the any-two-colliders casts since 0.3.3 (#33)
 - Any two colliders cast, whatever their shapes and transformations, mixed ones too: one generic impl per cast, with exact formulas for points, balls, boxes and polygons (in 3D: points, balls, and points against boxes) and the GJK ray cast for the rest; `Shape::primitive` and `rotation_and_scale` tell when a shape keeps its form; the ~70 hand-written per-pair impls are gone (#32)
-- 3D casts without an exact formula, every pair with a `Box3d`, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`, with a ball as its centre and radius: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; `Transform3d` Point and Ball pairs use the exact `Vec3` casts; conservative advancement is gone (#31)
-- 2D casts without an exact formula, Ball–Poly2d so far, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; conservative advancement is gone from 2D (#30)
