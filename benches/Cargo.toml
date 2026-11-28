@@ -1,0 +1,29 @@
+[package]
+name = "auburn-benches"
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+description = "Benchmarks of auburn's basic queries, next to parry and the formulas a game would write by hand."
+repository = { workspace = true }
+publish = false
+
+# Only benchmarks: `cargo test` builds nothing here, so parry and criterion stay out of the tests.
+[dev-dependencies]
+auburn2d = { path = "../auburn2d" }
+auburn3d = { path = "../auburn3d" }
+criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+parry2d = { version = "0.31", default-features = false, features = ["required-features", "std", "alloc"] }
+parry3d = { version = "0.31", default-features = false, features = ["required-features", "std", "alloc"] }
+
+[[bench]]
+name = "queries2d"
+path = "queries2d.rs"
+harness = false
+
+[[bench]]
+name = "queries3d"
+path = "queries3d.rs"
+harness = false
+
+[lints]
+workspace = true

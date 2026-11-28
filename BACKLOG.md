@@ -2,12 +2,12 @@
 
 ## Now
 
-1. Benchmarks (criterion) of the basic queries: `collides`, `penetrates` and the casts between
-   points, balls and boxes, in 2D and 3D, at `Vec2`/`Vec3` positions and under rotation, with
-   parry and the hand-written formula alongside.
-1. Exact `collides` and `penetrates` for the pairs the casts have formulas for. Both run GJK
-   (and EPA) for every pair today: two balls at `Vec2` positions take about 12 ns to
-   `collides` and 56 ns to `penetrates`, the formula about 1 ns (a quick timing, not a benchmark).
+1. [Exact `collides` and `penetrates`](backlog/exact-overlaps.md) for the pairs the casts have
+   formulas for. Both run GJK (and EPA) today, at 7 to 30 times the formula's time in 2D and
+   hundreds of times in 3D, where `penetrates` for two balls can be off by 7%.
+1. [The basic pairs' casts as fast as the formula](backlog/fast-casts.md): in 2D `toi` takes 4
+   to 8 times its time and `cast` 2 to 4, and 3D casts a box against a ball or a box through
+   GJK, at 50 times the slab test for two boxes.
 1. Playground: a bullet-hell demo to play, in the browser too. Thousands of fast bullets cast
    against the player every frame, with the frame time on screen. It's the hot path under load,
    and it shows how little code a game needs.
@@ -27,7 +27,7 @@
 - Segment shape and a ray query API.
 - More shapes in the enums: `Poly2d` in `Shape2d`; a 3D convex hull/polyhedron shape and a `Shape3d` enum.
 - Cleanup: remove `derive_type::Wrapper` (deprecated since 0.1.0), the commented-out code, and duplicated iteration constants.
-- [Performance](backlog/performance.md), after the benchmarks.
+- [Performance](backlog/performance.md): GJK, EPA and the casts that have no formula.
 - [Docs: README examples and missing docs](backlog/docs.md)
 - Playground: step through GJK and EPA, drawing the simplex and the polytope at each
   iteration. Needs hooks in the algorithms.
@@ -59,6 +59,7 @@
 
 ## Done
 
+- Benchmarks, `cargo bench -p auburn-benches`: `collides`, `penetrates`, `toi` and 2D `cast` between points, balls and boxes, at positions and turned, next to parry and the hand-written formula, which have to agree before anything is timed (#40)
 - What auburn is for, under Decisions in `CLAUDE.md`, with a Design section on performance and edge cases; Now starts with benchmarks and exact `collides`/`penetrates`; the descriptions say collision queries for games that do their own movement and physics (#38)
 - 2D `a.cast(&b, vel)` gives a `CastHit`: `toi`'s time, the contact's normal and a point where the shapes touch, or the shortest way out if they overlap already; exact for the pairs with formulas. Balls go through 3D's ray cast as a centre and a radius, which settles on the nearest point. The playground draws the hit (#37)
 - The root README's CI badge points at `ci.yml`, the workflow that runs, instead of `rust.yml`, whose badge 404'd (#36)
@@ -68,5 +69,3 @@
 - Any two colliders cast, whatever their shapes and transformations, mixed ones too: one generic impl per cast, with exact formulas for points, balls, boxes and polygons (in 3D: points, balls, and points against boxes) and the GJK ray cast for the rest; `Shape::primitive` and `rotation_and_scale` tell when a shape keeps its form; the ~70 hand-written per-pair impls are gone (#32)
 - 3D casts without an exact formula, every pair with a `Box3d`, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`, with a ball as its centre and radius: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; `Transform3d` Point and Ball pairs use the exact `Vec3` casts; conservative advancement is gone (#31)
 - 2D casts without an exact formula, Ball–Poly2d so far, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; conservative advancement is gone from 2D (#30)
-- 2D bevy `Transform` uses its own x and y scale on the plane z = 0, so uneven scales and mirrors work and z no longer leaks in; `inverse` is the matrix inverse in 2D and 3D, and converting to `Transform2d`/`Transform3d` keeps an even scale exactly (#29)
-- `From<ScaleTranslate2d> for bevy Isometry2d` is gone: its body was `todo!()`, so it could only panic (#28)

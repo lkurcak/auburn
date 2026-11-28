@@ -35,6 +35,15 @@ default branch, so it has to be true there.
   before un-ignoring anything:
   `AUBURN_RANDOMIZED_SCALE=20 cargo test --release --all-features -- --ignored`.
 
+## Benchmarks
+
+- `cargo bench -p auburn-benches` times the basic queries next to parry and the hand-written
+  formula ([`benches/README.md`](benches/README.md)). For a change to a query's speed, run the
+  benchmarks it touches before and after it (`-- --save-baseline before`, then
+  `-- --baseline before`) and put the numbers in the pull request.
+- Run them on a quiet machine: another busy process inflates every time. `cat /proc/loadavg`
+  first.
+
 ## Design
 
 How performance and edge cases fit together (agent, 28 Nov 2026):
@@ -49,7 +58,7 @@ How performance and edge cases fit together (agent, 28 Nov 2026):
   along an axis. A special case may slow the general path, never the basic pairs. The
   benchmarks check that.
 - A query computes only what it answers: `toi` doesn't look for the exit. Ball–Box2d `toi`
-  breaks this today ([performance](backlog/performance.md)).
+  breaks this today ([fast casts](backlog/fast-casts.md)).
 - Inputs outside the contract, such as a non-convex polygon or a negative radius, are
   `debug_assert`ed, at no cost in release builds.
 
