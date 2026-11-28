@@ -9,8 +9,9 @@
 //! any shape without a primitive or under a transformation without a rotation and scale.
 //!
 //! [`Cast::cast`] reads the same span, with the normal where it starts, in [`hit`]. If the
-//! shapes overlap already, it parts them by the shortest move instead, in [`penetration`].
-//! Either way, [`contact_point`] finds where they touch.
+//! shapes overlap already, it parts them by the shortest move instead, as
+//! [`Penetrates`](crate::relation::penetrates::Penetrates) does, in
+//! [`generic`](super::generic). Either way, [`contact_point`] finds where they touch.
 //!
 //! None of the formulas has a tolerance to tune for the shapes' size. Boxes turned the same
 //! way, as boxes that don't rotate are, take the fewest steps.
@@ -22,6 +23,7 @@ use crate::Vec2;
 use crate::algorithm::toi::{Radii, nearest_to_origin, rounded_shape_cast, sweep};
 use crate::algorithm::{epa, gjk};
 use crate::collider::Collider;
+use crate::interactions::generic::{ball_in_rect, in_ball, penetration};
 use crate::property::support::Support;
 use crate::relation::cast::{
     Cast, CastHit, TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact,
@@ -155,26 +157,6 @@ fn exact(a: &Form<'_>, b: &Form<'_>, vel: Vec2) -> Option<Option<Span>> {
         }
         _ => return None,
     })
-}
-
-/// How to part `a` from `b`, which it overlaps now, by the shortest move: the unit normal out
-/// of `b`, and how far. Only for pairs with an exact formula.
-fn penetration(a: &Form<'_>, b: &Form<'_>, vel: Vec2) -> (Vec2, f32) {
-    use Form::{Ball, Point, Rect};
-    match (a, b) {
-        (Point(_), Point(_)) => (against(vel), 0.0),
-        (Point(p), Ball(q, r)) | (Ball(p, r), Point(q)) => point_ball_penetration(*p - *q, *r, vel),
-        (Ball(p, r), Ball(q, s)) => point_ball_penetration(*p - *q, r + s, vel),
-        (Ball(p, r), Rect(rect)) => ball_rect_penetration(*p, *r, rect),
-        (Rect(rect), Ball(p, r)) => {
-            let (normal, depth) = ball_rect_penetration(*p, *r, rect);
-            (-normal, depth)
-        }
-        (Point(p), Rect(rect)) => rect_rect_penetration(&rect.point(*p), rect),
-        (Rect(rect), Point(p)) => rect_rect_penetration(rect, &rect.point(*p)),
-        (Rect(r), Rect(s)) => rect_rect_penetration(r, s),
-        _ => separating_axes_penetration(a, b),
-    }
 }
 
 /// A point where `a`, moved by `shift`, touches `b`, with `normal` the contact's normal. Only
@@ -315,7 +297,7 @@ impl Span {
 }
 
 /// A collider in world space, in a form with exact casts if it has one.
-enum Form<'a> {
+pub(super) enum Form<'a> {
     Point(Vec2),
     /// A ball's centre and radius.
     Ball(Vec2, f32),
@@ -327,23 +309,23 @@ enum Form<'a> {
 
 /// A box in world space.
 #[derive(Clone, Copy)]
-struct Rect {
-    centre: Vec2,
-    rot: Rotor2d,
+pub(super) struct Rect {
+    pub(super) centre: Vec2,
+    pub(super) rot: Rotor2d,
     /// Where `rot` turns X and Y, along the box's edges.
     axes: [Vec2; 2],
-    half: Vec2,
+    pub(super) half: Vec2,
 }
 
 /// A convex polygon in world space: its vertices, relative to `origin`.
-struct Polygon<'a> {
+pub(super) struct Polygon<'a> {
     origin: Vec2,
     vertices: Cow<'a, [Vec2]>,
 }
 
 impl<'a> Form<'a> {
     #[inline]
-    fn of<S: Shape, T: Transformation2d>(c: &Collider<'a, S, T>) -> Self {
+    pub(super) fn of<S: Shape, T: Transformation2d>(c: &Collider<'a, S, T>) -> Self {
         let at = c.isometry.apply_to_origin();
         let shape = c.shape.primitive();
         if let Primitive::Point = shape {
@@ -380,27 +362,31 @@ impl<'a> Form<'a> {
         }
     }
 
-    /// The point that [`span`](Self::span) measures from, for a point, box or polygon.
-    fn anchor(&self) -> Vec2 {
+    /// The point that [`span`](Self::span) measures from, for a point, ball, box or polygon.
+    pub(super) fn anchor(&self) -> Vec2 {
         match self {
-            Form::Point(p) => *p,
+            Form::Point(p) | Form::Ball(p, _) => *p,
             Form::Rect(rect) => rect.centre,
             Form::Polygon(polygon) => polygon.origin,
-            Form::Ball(..) | Form::Other => unreachable!("not a point, box or polygon"),
+            Form::Other => unreachable!("not a point, ball, box or polygon"),
         }
     }
 
-    /// The span of a point, box or polygon along `axis`, measured from its anchor.
+    /// The span of a point, ball, box or polygon along `axis`, measured from its anchor.
     fn span(&self, axis: Vec2) -> (f32, f32) {
         match self {
             Form::Point(_) => (0.0, 0.0),
+            Form::Ball(_, r) => {
+                let reach = r * axis.length();
+                (-reach, reach)
+            }
             Form::Rect(rect) => {
                 let [x, y] = rect.axes;
                 let reach = rect.half.x * axis.dot(x).abs() + rect.half.y * axis.dot(y).abs();
                 (-reach, reach)
             }
             Form::Polygon(polygon) => project(&polygon.vertices, axis),
-            Form::Ball(..) | Form::Other => unreachable!("not a point, box or polygon"),
+            Form::Other => unreachable!("not a point, ball, box or polygon"),
         }
     }
 
@@ -460,7 +446,7 @@ impl<'a> Form<'a> {
 impl Rect {
     /// A point at `p`, as a box turned like this one.
     #[inline]
-    fn point(&self, p: Vec2) -> Rect {
+    pub(super) fn point(&self, p: Vec2) -> Rect {
         Rect {
             centre: p,
             half: Vec2::ZERO,
@@ -468,18 +454,28 @@ impl Rect {
         }
     }
 
+    /// The point `p` in the box's frame: from its centre, turned with it.
+    #[inline]
+    pub(super) fn local(&self, p: Vec2) -> Vec2 {
+        let p = p - self.centre;
+        if self.rot == Rotor2d::IDENTITY {
+            p
+        } else {
+            self.rot.inverse() * p
+        }
+    }
+
     /// The point `p` and the velocity `vel` in the box's frame: from its centre, turned with
     /// it.
     #[inline]
     fn in_frame(&self, p: Vec2, vel: Vec2) -> (Vec2, Vec2) {
-        let p = p - self.centre;
+        let p = self.local(p);
         if self.rot == Rotor2d::IDENTITY {
             return (p, vel);
         }
         // Turning a velocity at rest could make one of its components count as moving.
         let vel = if is_at_rest(vel) { Vec2::ZERO } else { vel };
-        let inverse = self.rot.inverse();
-        (inverse * p, inverse * vel)
+        (p, self.rot.inverse() * vel)
     }
 }
 
@@ -513,7 +509,7 @@ fn point_point(a: Vec2, b: Vec2, vel: Vec2) -> Option<Span> {
 #[inline]
 fn point_ball(p: Vec2, radius: f32, vel: Vec2) -> Option<Span> {
     if is_at_rest(vel) {
-        return (p.length_squared() <= radius * radius).then_some(Span::ALWAYS);
+        return in_ball(p, radius).then_some(Span::ALWAYS);
     }
     // Along the path, in units of distance: the point passes closest to the centre at
     // `-along`, `miss` away from it, and is in the ball for a half chord either side.
@@ -531,13 +527,6 @@ fn point_ball(p: Vec2, radius: f32, vel: Vec2) -> Option<Span> {
         // Where the point enters, out from the centre.
         normal: miss - dir * half_chord,
     })
-}
-
-/// How to part a point at `p`, relative to the centre of a ball of `radius` that holds it, by
-/// the shortest move: straight out from the centre, or against `vel` from the centre itself.
-fn point_ball_penetration(p: Vec2, radius: f32, vel: Vec2) -> (Vec2, f32) {
-    let normal = unit(p).unwrap_or_else(|| against(vel));
-    (normal, radius - p.length())
 }
 
 /// When a point at `p`, moving at `vel`, is in the box at the origin with half size `half`,
@@ -575,24 +564,6 @@ fn rect_rect(a: &Rect, b: &Rect, vel: Vec2) -> Option<Span> {
     })
 }
 
-/// How to part box `a` from box `b`, which it overlaps, by the shortest move.
-fn rect_rect_penetration(a: &Rect, b: &Rect) -> (Vec2, f32) {
-    if a.rot != b.rot {
-        return separating_axes_penetration(&Form::Rect(*a), &Form::Rect(*b));
-    }
-    // Out of the box with both half sizes, through its nearest side.
-    let (p, _) = b.in_frame(a.centre, Vec2::ZERO);
-    let half = a.half + b.half;
-    let sides = [
-        (Vec2::X, half.x - p.x),
-        (Vec2::NEG_X, half.x + p.x),
-        (Vec2::Y, half.y - p.y),
-        (Vec2::NEG_Y, half.y + p.y),
-    ];
-    let (normal, depth) = nearest(sides);
-    (b.rot * normal, depth)
-}
-
 /// When a ball at `centre`, moving at `vel`, overlaps `rect`, over all of time.
 ///
 /// Its centre is then within `radius` of the box. That rounded box is the box widened by
@@ -601,13 +572,10 @@ fn rect_rect_penetration(a: &Rect, b: &Rect) -> (Vec2, f32) {
 /// that disc, or leaves the widened box again without touching it.
 #[inline]
 fn ball_rect(centre: Vec2, radius: f32, rect: &Rect, vel: Vec2) -> Option<Span> {
-    let half = rect.half;
     if is_at_rest(vel) {
-        let (p, _) = rect.in_frame(centre, Vec2::ZERO);
-        let outside = (p.abs() - half).max(Vec2::ZERO);
-        let inside = outside.length_squared() <= radius * radius;
-        return inside.then_some(Span::ALWAYS);
+        return ball_in_rect(centre, radius, rect).then_some(Span::ALWAYS);
     }
+    let half = rect.half;
     // In the box's frame, and in units of distance along the path.
     let (dir, speed) = direction_and_speed(vel);
     let (p, dir) = rect.in_frame(centre, dir);
@@ -637,28 +605,6 @@ fn ball_rect(centre: Vec2, radius: f32, rect: &Rect, vel: Vec2) -> Option<Span> 
         exit: exit.max(entry) / speed,
         normal: rect.rot * normal,
     })
-}
-
-/// How to part a ball at `centre` from `rect`, which it overlaps, by the shortest move: out
-/// from the nearest point of the box, or if the centre is in the box, through its nearest side.
-fn ball_rect_penetration(centre: Vec2, radius: f32, rect: &Rect) -> (Vec2, f32) {
-    let (p, _) = rect.in_frame(centre, Vec2::ZERO);
-    let half = rect.half;
-    let outside = p - p.max(-half).min(half);
-    let (normal, depth) = match unit(outside) {
-        Some(normal) => (normal, radius - outside.length()),
-        None => {
-            let sides = [
-                (Vec2::X, half.x - p.x),
-                (Vec2::NEG_X, half.x + p.x),
-                (Vec2::Y, half.y - p.y),
-                (Vec2::NEG_Y, half.y + p.y),
-            ];
-            let (normal, depth) = nearest(sides);
-            (normal, radius + depth)
-        }
-    };
-    (rect.rot * normal, depth)
 }
 
 /// When `a`, moving at `vel`, overlaps `b`, over all of time, by the separating axis theorem.
@@ -691,31 +637,22 @@ fn separating_axes(a: &Form<'_>, b: &Form<'_>, vel: Vec2) -> Option<Span> {
     Some(span)
 }
 
-/// How to part `a` from `b`, which it overlaps, by the shortest move, by the separating axis
-/// theorem: along the axis on which their spans overlap the least. Each is a point, box or
-/// polygon.
-fn separating_axes_penetration(a: &Form<'_>, b: &Form<'_>) -> (Vec2, f32) {
-    let offset = a.anchor() - b.anchor();
-    let mut best = (Vec2::X, f32::INFINITY);
-    each_axis(a, b, |axis| {
-        let Some(axis) = unit(axis) else {
-            return Some(());
-        };
-        let (lo, hi) = overlap(a, b, offset, axis);
-        best = nearest([best, (axis, hi), (-axis, -lo)]);
-        Some(())
-    });
-    best
-}
-
-/// The axes that could separate `a` from `b`, each a point, box or polygon, handed to `along`
-/// until it gives `None`, which it then gives too.
+/// The axes that could separate `a` from `b`, each a point, box or polygon, or a ball against a
+/// polygon, handed to `along` until it gives `None`, which it then gives too.
 ///
 /// For these, they are the normals of their edges. Against a polygon, X and Y are tested too,
 /// so that one with fewer than three vertices is the segment or point it looks like, not a
-/// line or the whole plane.
+/// line or the whole plane. A ball has no edges, but a polygon it doesn't overlap is apart
+/// from it across an edge or along the line from its centre to the polygon's nearest vertex.
+///
+/// That holds only where they are, not along a cast, as a ball moving past a polygon could
+/// first touch it at any vertex: Ball–Poly2d casts go through support functions.
 #[inline]
-fn each_axis(a: &Form<'_>, b: &Form<'_>, mut along: impl FnMut(Vec2) -> Option<()>) -> Option<()> {
+pub(super) fn each_axis(
+    a: &Form<'_>,
+    b: &Form<'_>,
+    mut along: impl FnMut(Vec2) -> Option<()>,
+) -> Option<()> {
     let mut x_and_y = false;
     for shape in [a, b] {
         match shape {
@@ -737,25 +674,23 @@ fn each_axis(a: &Form<'_>, b: &Form<'_>, mut along: impl FnMut(Vec2) -> Option<(
         along(Vec2::X)?;
         along(Vec2::Y)?;
     }
+    if let (Form::Ball(centre, _), Form::Polygon(polygon))
+    | (Form::Polygon(polygon), Form::Ball(centre, _)) = (a, b)
+    {
+        let centre = *centre - polygon.origin;
+        along(nearest_vertex(&polygon.vertices, centre) - centre)?;
+    }
     Some(())
 }
 
 /// How far along `axis`, times its length, `a` can move from where it is and still overlap
 /// `b`: from `lo` to `hi`. `offset` is from `b`'s anchor to `a`'s.
 #[inline]
-fn overlap(a: &Form<'_>, b: &Form<'_>, offset: Vec2, axis: Vec2) -> (f32, f32) {
+pub(super) fn overlap(a: &Form<'_>, b: &Form<'_>, offset: Vec2, axis: Vec2) -> (f32, f32) {
     let (min_a, max_a) = a.span(axis);
     let (min_b, max_b) = b.span(axis);
     let d = offset.dot(axis);
     (min_b - max_a - d, max_b - min_a - d)
-}
-
-/// The way out of `ways`, each a direction and how far to go that way, that goes the least far:
-/// the first of those that go as little.
-fn nearest<const N: usize>(ways: [(Vec2, f32); N]) -> (Vec2, f32) {
-    ways.into_iter()
-        .reduce(|best, way| if way.1 < best.1 { way } else { best })
-        .expect("there is a way")
 }
 
 /// When something moving at `vel` along one axis is within `lo..=hi` of where it starts: from
@@ -813,6 +748,14 @@ fn furthest(vertices: &[Vec2], dir: Vec2) -> Vec2 {
         .iter()
         .max_by(|p, q| p.dot(dir).total_cmp(&q.dot(dir)));
     *furthest.expect("a polygon has vertices")
+}
+
+/// The vertex of `vertices` nearest to `p`.
+fn nearest_vertex(vertices: &[Vec2], p: Vec2) -> Vec2 {
+    let nearest = vertices
+        .iter()
+        .min_by(|q, r| q.distance_squared(p).total_cmp(&r.distance_squared(p)));
+    *nearest.expect("a polygon has vertices")
 }
 
 /// The span of `vertices` along `axis`.

@@ -13,6 +13,7 @@
 use crate::algorithm::shape_cast;
 use crate::algorithm::toi::rounded_shape_cast;
 use crate::collider::Collider;
+use crate::interactions::generic::{in_ball, in_cuboid};
 use crate::property::support::Support;
 use crate::relation::cast::{
     TimeOfImpact, TimeOfImpactAndExit, TimeTravelingTimeOfImpact, TimeTravelingTimeOfImpactAndExit,
@@ -73,7 +74,7 @@ where
 }
 
 /// A collider in world space, in a form with exact casts if it has one.
-enum Form {
+pub(super) enum Form {
     Point(Vec3),
     /// A ball's centre and radius.
     Ball(Vec3, f32),
@@ -83,14 +84,15 @@ enum Form {
 }
 
 /// A box in world space.
-struct Cuboid {
-    centre: Vec3,
-    rot: Quat,
-    half: Vec3,
+pub(super) struct Cuboid {
+    pub(super) centre: Vec3,
+    pub(super) rot: Quat,
+    pub(super) half: Vec3,
 }
 
 impl Form {
-    fn of<S: Shape, T: Transformation3d>(c: &Collider<'_, S, T>) -> Self {
+    #[inline]
+    pub(super) fn of<S: Shape, T: Transformation3d>(c: &Collider<'_, S, T>) -> Self {
         let at = c.isometry.apply_to_origin();
         let shape = c.shape.primitive();
         if let Primitive::Point = shape {
@@ -110,6 +112,19 @@ impl Form {
                 half: b.half_size * s,
             }),
             _ => Form::Other,
+        }
+    }
+}
+
+impl Cuboid {
+    /// The point `p` in the box's frame: from its centre, turned with it.
+    #[inline]
+    pub(super) fn local(&self, p: Vec3) -> Vec3 {
+        let p = p - self.centre;
+        if self.rot == Quat::IDENTITY {
+            p
+        } else {
+            self.rot.inverse() * p
         }
     }
 }
@@ -140,8 +155,7 @@ fn point_point(a: Vec3, b: Vec3, vel: Vec3) -> Option<(f32, f32)> {
 #[inline]
 fn point_ball(p: Vec3, radius: f32, vel: Vec3) -> Option<(f32, f32)> {
     if is_at_rest(vel) {
-        return (p.length_squared() <= radius * radius)
-            .then_some((f32::NEG_INFINITY, f32::INFINITY));
+        return in_ball(p, radius).then_some((f32::NEG_INFINITY, f32::INFINITY));
     }
     // Along the path, in units of distance: the point passes closest to the centre at
     // `-along`, `miss` away from it, and is in the ball for a half chord either side.
@@ -161,8 +175,9 @@ fn point_ball(p: Vec3, radius: f32, vel: Vec3) -> Option<(f32, f32)> {
 /// opposite faces.
 #[inline]
 fn point_cuboid(p: Vec3, cuboid: &Cuboid, vel: Vec3) -> Option<(f32, f32)> {
-    // At rest is at rest along every axis, however long.
-    let vel = if is_at_rest(vel) { Vec3::ZERO } else { vel };
+    if is_at_rest(vel) {
+        return in_cuboid(p, cuboid).then_some((f32::NEG_INFINITY, f32::INFINITY));
+    }
     let offset = p - cuboid.centre;
     let axes = [Vec3::X, Vec3::Y, Vec3::Z].map(|axis| cuboid.rot * axis);
     let (mut entry, mut exit) = (f32::NEG_INFINITY, f32::INFINITY);

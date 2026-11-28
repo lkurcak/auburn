@@ -463,6 +463,40 @@ mod bevy_transform {
     }
 }
 
+/// `penetrates` went through EPA for every pair, which stopped at its cap of 64 iterations on
+/// these two balls, off by 7%. Points, balls and boxes have exact formulas now.
+#[test]
+fn turned_balls_penetrate_exactly() {
+    // Pair 678 of the turned benchmarks.
+    let at = |pos: [f32; 3], rot: [f32; 4]| Transform3d {
+        pos: Vec3::from_array(pos),
+        rot: auburn3d::Quat::from_array(rot),
+        scale: 1.0,
+    };
+    let ta = at(
+        [5.422267, -1.1981211, -5.8299394],
+        [-0.59898335, -0.17183474, -0.7819134, 0.01741162],
+    );
+    let tb = at(
+        [5.3515234, -1.2901306, -5.6765985],
+        [-0.21941993, -0.013420136, -0.25052252, -0.942822],
+    );
+    let (a, b) = (Ball::new(1.4826869), Ball::new(1.0987806));
+    let d = ta.pos - tb.pos;
+    let want = d.normalize() * (a.radius + b.radius - d.length());
+    let p = a.at(&ta).penetrates(&b.at(&tb));
+    assert!(
+        p.is_some_and(|p| (p - want).length() < 1e-5),
+        "{p:?}, not {want:?}"
+    );
+    let p = b.at(&tb).penetrates(&a.at(&ta));
+    assert!(
+        p.is_some_and(|p| (p + want).length() < 1e-5),
+        "{p:?}, not {:?}",
+        -want
+    );
+}
+
 // Degenerate shapes that work today.
 
 #[test]
