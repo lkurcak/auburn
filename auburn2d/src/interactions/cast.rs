@@ -55,31 +55,6 @@ casts! {
     TimeTravelingTimeOfImpactAndExit::tttoiae -> (f32, f32);
 }
 
-/// `$body`, with `$core_a` and `$core_b` the support functions of the cores of colliders `$a`
-/// and `$b`, in forms `$x` and `$y`, and `$radii` their radii: a ball is its centre rounded by
-/// its radius, and any other shape is its own core.
-macro_rules! with_cores {
-    ($x:expr, $y:expr, $a:expr, $b:expr, |$core_a:ident, $core_b:ident, $radii:ident| $body:expr) => {
-        match ($x, $y) {
-            (Form::Ball(p, r), _) => {
-                let ($core_a, $core_b) = (|_: Vec2| *p, |dir: Vec2| $b.support(dir));
-                let $radii = Radii { a: *r, b: 0.0 };
-                $body
-            }
-            (_, Form::Ball(q, r)) => {
-                let ($core_a, $core_b) = (|dir: Vec2| $a.support(dir), |_: Vec2| *q);
-                let $radii = Radii { a: 0.0, b: *r };
-                $body
-            }
-            _ => {
-                let ($core_a, $core_b) = (|dir: Vec2| $a.support(dir), |dir: Vec2| $b.support(dir));
-                let $radii = Radii::NONE;
-                $body
-            }
-        }
-    };
-}
-
 impl<S1, S2, T1, T2> Cast<Collider<'_, S2, T2>> for Collider<'_, S1, T1>
 where
     S1: Shape + Support,
@@ -109,9 +84,11 @@ where
     let (x, y) = (Form::of(a), Form::of(b));
     match exact(&x, &y, vel) {
         Some(span) => span.map(|span| (span.entry, span.exit)),
-        None => with_cores!(&x, &y, a, b, |core_a, core_b, radii| {
-            rounded_shape_cast(core_a, core_b, radii, vel)
-        }),
+        None => {
+            let origin = y.origin(b);
+            let (core_a, core_b) = (x.core(a, origin), y.core(b, origin));
+            rounded_shape_cast(core_a, core_b, radii(&x, &y), vel)
+        }
     }
 }
 
@@ -130,8 +107,12 @@ where
 {
     let (x, y) = (Form::of(a), Form::of(b));
     let Some(span) = exact(&x, &y, vel) else {
-        return with_cores!(&x, &y, a, b, |core_a, core_b, radii| {
-            support_hit(core_a, core_b, radii, vel)
+        let origin = y.origin(b);
+        let (core_a, core_b) = (x.core(a, origin), y.core(b, origin));
+        let hit = support_hit(core_a, core_b, radii(&x, &y), vel)?;
+        return Some(CastHit {
+            point: hit.point + origin,
+            ..hit
         });
     };
     let span = span.filter(|span| span.exit >= 0.0)?;
@@ -218,7 +199,21 @@ fn contact_point(a: &Form<'_>, b: &Form<'_>, shift: Vec2, normal: Vec2) -> Vec2 
     }
 }
 
-/// [`hit`], through the support functions of shapes' cores, rounded by `radii`.
+/// The radii that round the cores of `a` and `b` in a cast through support functions: a
+/// ball's, and none for any other shape.
+fn radii(a: &Form<'_>, b: &Form<'_>) -> Radii {
+    let radius = |form: &Form<'_>| match form {
+        Form::Ball(_, r) => *r,
+        _ => 0.0,
+    };
+    Radii {
+        a: radius(a),
+        b: radius(b),
+    }
+}
+
+/// [`hit`], through the support functions of shapes' cores, rounded by `radii`, with the point
+/// in the frame they are in.
 fn support_hit<F1, F2>(core_a: F1, core_b: F2, radii: Radii, vel: Vec2) -> Option<CastHit>
 where
     F1: Fn(Vec2) -> Vec2 + Copy,
@@ -406,6 +401,44 @@ impl<'a> Form<'a> {
             }
             Form::Polygon(polygon) => project(&polygon.vertices, axis),
             Form::Ball(..) | Form::Other => unreachable!("not a point, box or polygon"),
+        }
+    }
+
+    /// Where its core is measured from in a cast through support functions, as `b`: its anchor,
+    /// a ball's centre, or where `collider` puts its origin.
+    fn origin<S: Shape + Support, T: Transformation2d>(
+        &self,
+        collider: &Collider<'_, S, T>,
+    ) -> Vec2 {
+        match self {
+            Form::Point(p) | Form::Ball(p, _) => *p,
+            Form::Rect(rect) => rect.centre,
+            Form::Polygon(polygon) => polygon.origin,
+            Form::Other => collider.isometry.apply_to_origin(),
+        }
+    }
+
+    /// The support function of its core, measured from `origin`: a ball is its centre, rounded
+    /// by its radius, and any other shape is its own core.
+    ///
+    /// Shapes with a form are measured from their own anchor first, so that they are as precise
+    /// far from the origin as near it. Any other shape goes through `collider`'s support
+    /// function, in world space.
+    fn core<'s, S: Shape + Support, T: Transformation2d>(
+        &'s self,
+        collider: &'s Collider<'_, S, T>,
+        origin: Vec2,
+    ) -> impl Fn(Vec2) -> Vec2 + Copy + 's {
+        move |dir: Vec2| match self {
+            Form::Point(p) | Form::Ball(p, _) => *p - origin,
+            Form::Rect(rect) => {
+                let [x, y] = rect.axes;
+                let x = x * rect.half.x.copysign(dir.dot(x));
+                let y = y * rect.half.y.copysign(dir.dot(y));
+                rect.centre - origin + x + y
+            }
+            Form::Polygon(polygon) => polygon.origin - origin + furthest(&polygon.vertices, dir),
+            Form::Other => collider.support(dir) - origin,
         }
     }
 
@@ -772,6 +805,14 @@ fn facing(vertices: &[Vec2], m: Vec2, across: Vec2) -> (f32, f32, f32) {
             (lo.min(d), hi.max(d))
         });
     (lo, hi, level)
+}
+
+/// The vertex of `vertices` furthest along `dir`.
+fn furthest(vertices: &[Vec2], dir: Vec2) -> Vec2 {
+    let furthest = vertices
+        .iter()
+        .max_by(|p, q| p.dot(dir).total_cmp(&q.dot(dir)));
+    *furthest.expect("a polygon has vertices")
 }
 
 /// The span of `vertices` along `axis`.
