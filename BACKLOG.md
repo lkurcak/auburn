@@ -2,18 +2,20 @@
 
 ## Now
 
+1. Cast result in 2D, with time, hit normal and contact point. `CastResult` is commented out
+   in `auburn2d/src/relation/cast.rs`; sliding along walls needs the normal.
+1. The same cast result in 3D.
+1. `move_and_slide` helper for kinematic characters. Needs the cast result.
+
 ## Later
 
-- Cast result with time, hit normal and contact point. `CastResult` is commented out in `relation/cast.rs`; sliding along walls needs the normal.
 - Capsule shape in 2D and 3D.
 - Segment shape and a ray query API.
 - More shapes in the enums: `Poly2d` in `Shape2d`; a 3D convex hull/polyhedron shape and a `Shape3d` enum.
 - Cleanup: remove `derive_type::Wrapper` (deprecated since 0.1.0), the commented-out code, and duplicated iteration constants.
 - Benchmarks (criterion) against parry2d/3d, to back the "fast" claim.
 - [Performance](backlog/performance.md), after the benchmarks.
-- Fix the root README's CI badge: it points at `rust.yml`, but the workflow is `ci.yml`, so the image 404s.
 - [Docs: READMEs, missing docs, positioning](backlog/docs.md)
-- `move_and_slide` helper for kinematic characters. Needs the cast result.
 - Small bevy plugin: collider components and a query `SystemParam`. The bevy example currently checks every pair.
 - Simple broadphase: a uniform grid or sort-and-sweep.
 - Playground: step through GJK and EPA, drawing the simplex and the polytope at each
@@ -39,6 +41,7 @@
 
 ## Done
 
+- The root README's CI badge points at `ci.yml`, the workflow that runs, instead of `rust.yml`, whose badge 404'd (#36)
 - Playground online at <https://lkurcak.github.io/auburn/>, linked from the READMEs: `pages.yml` builds it for the browser on pull requests and publishes it from main (#35)
 - Playground (`cargo run -p auburn-playground`, or `trunk serve` in `playground/`): drag a point, a ball, a box and a polygon, see each query's answers and ghosts, copy a pair as a test, and keep the scene in the page's URL (#34)
 - Released 0.4.0 on crates.io: auburn2d and auburn3d, with every fix and the any-two-colliders casts since 0.3.3 (#33)
@@ -48,4 +51,3 @@
 - 2D bevy `Transform` uses its own x and y scale on the plane z = 0, so uneven scales and mirrors work and z no longer leaks in; `inverse` is the matrix inverse in 2D and 3D, and converting to `Transform2d`/`Transform3d` keeps an even scale exactly (#29)
 - `From<ScaleTranslate2d> for bevy Isometry2d` is gone: its body was `todo!()`, so it could only panic (#28)
 - `Poly2d` casts are one swept SAT that ignores winding and has no absolute tolerances, so tiny and clockwise polygons work; `regular` is counter-clockwise, `area` works, an empty polygon is a point at its origin, and debug builds check convexity (#27)
-- Ball and point casts read off one overlap span: no NaN at rest, negative time-traveling times in 3D, tiny velocities, Point–Point through-paths; the at-rest answers are documented and every pair gives them (#26)
