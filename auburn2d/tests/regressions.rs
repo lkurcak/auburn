@@ -634,3 +634,59 @@ fn uneven_scale_support() {
     let want = Vec2::new(1.0, 16.0) / 17f32.sqrt();
     assert!((s - want).length() < 1e-4, "{s:?}, want {want:?}");
 }
+
+/// `penetrates` went through EPA for every pair. EPA stops at a tolerance on the depth, and on
+/// a curve the direction's error is about its square root: up to about 3e-3 rad. Points,
+/// balls, boxes and polygons have exact formulas now.
+#[test]
+fn curved_penetration_is_exact() {
+    let check = |p: Option<Vec2>, want: Vec2, what: &str| {
+        assert!(
+            p.is_some_and(|p| (p - want).length() < 1e-5),
+            "{what}: {p:?}, not {want:?}"
+        );
+    };
+    let (ball, square) = (Ball::new(1.0), Box2d::square(1.0));
+    let poly = square_poly(1.0);
+    let z = Vec2::ZERO;
+    for k in 0..32 {
+        // All the way round, for balls and points.
+        let dir = Vec2::from_angle(0.1 + k as f32 * std::f32::consts::TAU / 32.0);
+        let (near, nearer) = (dir * 1.5, dir * 0.5);
+        check(
+            ball.at(&z).penetrates(&ball.at(&near)),
+            -nearer,
+            "ball-ball",
+        );
+        check(
+            Point.at(&nearer).penetrates(&ball.at(&z)),
+            nearer,
+            "point-ball",
+        );
+        check(
+            ball.at(&z).penetrates(&Point.at(&nearer)),
+            -nearer,
+            "ball-point",
+        );
+        // Out of the corner at (1, 1): a radius from it, half of it deep.
+        let dir = Vec2::from_angle(0.1 + k as f32 * (std::f32::consts::FRAC_PI_2 - 0.2) / 31.0);
+        let out = dir * 0.5;
+        let centre = Vec2::ONE + out;
+        check(ball.at(&centre).penetrates(&square.at(&z)), out, "ball-box");
+        check(
+            square.at(&z).penetrates(&ball.at(&centre)),
+            -out,
+            "box-ball",
+        );
+        check(
+            ball.at(&centre).penetrates(&poly.at(&z)),
+            out,
+            "ball-polygon",
+        );
+        check(
+            poly.at(&z).penetrates(&ball.at(&centre)),
+            -out,
+            "polygon-ball",
+        );
+    }
+}

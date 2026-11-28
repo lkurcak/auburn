@@ -40,7 +40,7 @@ impl<'a, S: Shape, I: Transformation3d> Collider<'a, S, I> {
         Self { shape, isometry }
     }
 
-    /// Checks if this collider intersects with another object.
+    /// Whether this collider overlaps another object. Touching counts.
     pub fn collides<T>(&self, other: &T) -> bool
     where
         Self: crate::relation::collides::Collides<T>,
@@ -48,10 +48,10 @@ impl<'a, S: Shape, I: Transformation3d> Collider<'a, S, I> {
         crate::relation::collides::Collides::collides(self, other)
     }
 
-    /// Checks if this collider penetrates another object and returns the penetration vector.
+    /// The shortest move of this collider that parts it from another object, so that they
+    /// only touch, or `None` if they don't overlap.
     ///
-    /// Returns `Some(penetration_vector)` if they overlap, or `None` if they don't.
-    /// The penetration vector points in the direction to move `self` to resolve the collision.
+    /// Moving `self` by it resolves the collision. Shapes that only touch give a zero vector.
     pub fn penetrates<T>(&self, other: &T) -> Option<Vec3>
     where
         Self: crate::relation::penetrates::Penetrates<T>,

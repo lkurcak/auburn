@@ -2,12 +2,9 @@
 
 ## Now
 
-1. [Exact `collides` and `penetrates`](backlog/exact-overlaps.md) for the pairs the casts have
-   formulas for. Both run GJK (and EPA) today, at 7 to 30 times the formula's time in 2D and
-   hundreds of times in 3D, where `penetrates` for two balls can be off by 7%.
-1. [The basic pairs' casts as fast as the formula](backlog/fast-casts.md): in 2D `toi` takes 4
-   to 8 times its time and `cast` 2 to 4, and 3D casts a box against a ball or a box through
-   GJK, at 50 times the slab test for two boxes.
+1. [The basic pairs' casts and `penetrates` as fast as the formula](backlog/fast-casts.md): in
+   2D `toi` takes 4 to 8 times its time, `cast` 2 to 4 and `penetrates` 4 to 7, and 3D casts a
+   box against a ball or a box through GJK, at 50 times the slab test for two boxes.
 1. Playground: a bullet-hell demo to play, in the browser too. Thousands of fast bullets cast
    against the player every frame, with the frame time on screen. It's the hot path under load,
    and it shows how little code a game needs.
@@ -49,6 +46,11 @@
   last separating line, so at a curved contact it can be off by about the square root of the
   cast's tolerance. The randomized suite samples no such shape.
 - [3D `shape_cast` takes near-misses for grazes](backlog/ray-cast-near-miss.md).
+- 3D boxes turned different ways: `collides` and `penetrates` by the separating axis test, as
+  2D has them. They go through GJK and EPA, at 323 and 702 ns against parry's 114 and 993.
+- `penetrates` through EPA, for a ball under an uneven scale or a curved shape of the game's
+  own, is off on the curve by about the square root of EPA's tolerance: up to 3e-3 rad in 2D.
+  A ball could go as its centre and radius, as the casts do.
 
 ### Above the base layer, once it's right
 
@@ -59,6 +61,7 @@
 
 ## Done
 
+- Exact `collides` and `penetrates` for points, balls, boxes and polygons in 2D, and points, balls and boxes in 3D except two boxes turned different ways; GJK and EPA for the rest. `collides` is as fast as the formula, `penetrates` 1 to 7 times it (it was up to 1300), and exact where EPA was off by up to 3e-3 rad in 2D and 7% in 3D (#42)
 - Benchmarks, `cargo bench -p auburn-benches`: `collides`, `penetrates`, `toi` and 2D `cast` between points, balls and boxes, at positions and turned, next to parry and the hand-written formula, which have to agree before anything is timed (#40)
 - What auburn is for, under Decisions in `CLAUDE.md`, with a Design section on performance and edge cases; Now starts with benchmarks and exact `collides`/`penetrates`; the descriptions say collision queries for games that do their own movement and physics (#38)
 - 2D `a.cast(&b, vel)` gives a `CastHit`: `toi`'s time, the contact's normal and a point where the shapes touch, or the shortest way out if they overlap already; exact for the pairs with formulas. Balls go through 3D's ray cast as a centre and a radius, which settles on the nearest point. The playground draws the hit (#37)

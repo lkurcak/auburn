@@ -33,7 +33,6 @@ with `auburn`, `parry` or `formula` last. The time criterion gives is for one qu
 
 Before timing anything, each benchmark checks that the formula and parry agree on every
 pair, so that they answer the same question. Where auburn's answers differ from theirs, it
-prints how many and the first one. Today that's 3D `penetrates` for balls under
-`Transform3d`, on four pairs.
+prints how many and the first one. Today none do.
 
 Times depend on the machine and on what else runs on it, so there are none here: run them.

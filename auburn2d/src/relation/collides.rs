@@ -1,4 +1,4 @@
 pub trait Collides<T> {
-    /// Returns true if the two objects collide.
+    /// Whether the shapes overlap. Touching counts.
     fn collides(&self, other: &T) -> bool;
 }

@@ -79,6 +79,17 @@ pub(crate) fn direction_and_speed(vel: Vec3) -> (Vec3, f32) {
     (v / length, length * largest)
 }
 
+/// `v` scaled to length 1, or `None` if it is too short to have a direction. It is scaled to a
+/// largest component of 1 first, so that its squared length can't underflow.
+pub(crate) fn unit(v: Vec3) -> Option<Vec3> {
+    let largest = v.abs().max_element();
+    if !(1.0 / largest).is_finite() {
+        return None;
+    }
+    let v = v / largest;
+    Some(v / v.length())
+}
+
 /// The four casts' answers from `span`, the times between which the shapes overlap over all of
 /// time (`None` if never).
 pub(crate) mod from_span {

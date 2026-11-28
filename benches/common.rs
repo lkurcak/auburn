@@ -45,8 +45,8 @@ impl Rng {
 
 /// Answers close enough to count as the same, as the implementations round differently and
 /// some iterate to a tolerance: times to 1e-3, and vectors to 1e-2 of their length, as auburn's
-/// `penetrates` goes through EPA, whose directions on curved shapes are good to about 3e-3. A
-/// formula with a wrong sign or the wrong side is off by far more.
+/// `penetrates` for two boxes turned different ways goes through EPA, which stops at a
+/// tolerance. A formula with a wrong sign or the wrong side is off by far more.
 pub trait Close {
     fn close(&self, other: &Self) -> bool;
 }
