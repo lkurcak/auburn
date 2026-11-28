@@ -3,7 +3,10 @@
 [![CI](https://github.com/lkurcak/auburn/actions/workflows/ci.yml/badge.svg)](https://github.com/lkurcak/auburn/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A Cargo workspace for fast and simple collision detection and physics.
+Fast and simple collision queries for games that do their own movement and physics: whether
+two shapes overlap, the shortest way out, and when and where a moving shape hits another.
+auburn has no world and runs no simulation. You call it from your own update, so it fits any
+game, from a bullet hell to a platformer.
 
 **[Try auburn2d's queries in your browser](https://lkurcak.github.io/auburn/)**: drag shapes
 around and see what each query answers.

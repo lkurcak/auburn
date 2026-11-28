@@ -35,8 +35,34 @@ default branch, so it has to be true there.
   before un-ignoring anything:
   `AUBURN_RANDOMIZED_SCALE=20 cargo test --release --all-features -- --ignored`.
 
+## Design
+
+How performance and edge cases fit together (agent, 28 Nov 2026):
+
+- The basic pairs, points, balls and boxes that don't turn, in 2D and 3D, have a closed form
+  for every query, and they are the hot path: as fast as the formula a game would write by
+  hand. GJK and EPA are for the shapes and transformations without one. They bring edge
+  cases of their own (tolerances, iteration caps, degenerate simplices) that the formulas
+  don't have.
+- An edge case is settled by the definition, chosen so that the formula gives it without a
+  branch where it can: touching counts as overlapping, and IEEE infinities handle a move
+  along an axis. A special case may slow the general path, never the basic pairs. The
+  benchmarks check that.
+- A query computes only what it answers: `toi` doesn't look for the exit. Ball–Box2d `toi`
+  breaks this today ([performance](backlog/performance.md)).
+- Inputs outside the contract, such as a non-convex polygon or a negative radius, are
+  `debug_assert`ed, at no cost in release builds.
+
 ## Decisions
 
+- auburn is the collision code every game would otherwise write itself, from a bullet hell to
+  a platformer: overlaps, the shortest way out, casts, and helpers such as `move_and_slide`,
+  called from the game's own movement and physics. Performance comes first, and each use has
+  the simplest API that does it (owner, 28 Nov 2026).
+- It grows from the bottom up. A layer above, such as projectiles with a range and continuous
+  collision, tilemap collision, or a 2D or 3D character controller, comes only once the layer
+  below is right (owner, 28 Nov 2026).
+- No broadphase and no world, for the foreseeable future (owner, 28 Nov 2026).
 - The agent leads the project's design and maintenance; the owner tests it and answers
   questions (owner, 27 Nov 2026).
 - Releases are up to the agent (owner, 27 Nov 2026). Merging a version bump releases it

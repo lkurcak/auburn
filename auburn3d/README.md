@@ -4,7 +4,7 @@
 [![Docs.rs](https://img.shields.io/docsrs/auburn3d)](https://docs.rs/auburn3d)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 
-Fast and simple 3D collision detection and physics.
+Fast and simple 3D collision queries for games that do their own movement and physics.
 
 Part of the [`auburn`](https://github.com/lkurcak/auburn) workspace.
 

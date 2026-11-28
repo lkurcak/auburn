@@ -2,21 +2,28 @@
 
 ## Now
 
+1. Benchmarks (criterion) of the basic queries: `collides`, `penetrates` and the casts between
+   points, balls and boxes, in 2D and 3D, at `Vec2`/`Vec3` positions and under rotation, with
+   parry and the hand-written formula alongside.
+1. Exact `collides` and `penetrates` for the pairs the casts have formulas for. Both run GJK
+   (and EPA) for every pair today: two balls at `Vec2` positions take about 12 ns to
+   `collides` and 56 ns to `penetrates`, the formula about 1 ns (a quick timing, not a benchmark).
 1. The same cast result in 3D: `a.cast(&b, vel)` and `CastHit`, as 2D has them (#37), with the
    randomized check against the true contact.
+1. Review the cast traits before 1.0: whether `toiae`, `tttoi` and `tttoiae` earn their place
+   next to `cast` and `toi`.
 1. `move_and_slide` helper for kinematic characters. Needs the cast result.
 
 ## Later
+
+### Base layer and upkeep
 
 - Capsule shape in 2D and 3D.
 - Segment shape and a ray query API.
 - More shapes in the enums: `Poly2d` in `Shape2d`; a 3D convex hull/polyhedron shape and a `Shape3d` enum.
 - Cleanup: remove `derive_type::Wrapper` (deprecated since 0.1.0), the commented-out code, and duplicated iteration constants.
-- Benchmarks (criterion) against parry2d/3d, to back the "fast" claim.
 - [Performance](backlog/performance.md), after the benchmarks.
-- [Docs: READMEs, missing docs, positioning](backlog/docs.md)
-- Small bevy plugin: collider components and a query `SystemParam`. The bevy example currently checks every pair.
-- Simple broadphase: a uniform grid or sort-and-sweep.
+- [Docs: README examples and missing docs](backlog/docs.md)
 - Playground: step through GJK and EPA, drawing the simplex and the polytope at each
   iteration. Needs hooks in the algorithms.
 - Playground in 3D.
@@ -37,6 +44,13 @@
   last separating line, so at a curved contact it can be off by about the square root of the
   cast's tolerance. The randomized suite samples no such shape.
 - [3D `shape_cast` takes near-misses for grazes](backlog/ray-cast-near-miss.md).
+
+### Above the base layer, once it's right
+
+- Projectiles: a range they don't overshoot, and continuous collision for fast ones, at no
+  cost in speed.
+- Tilemap collision.
+- A character controller, in 2D or 3D.
 
 ## Done
 
