@@ -3,7 +3,7 @@ name = "auburn3d"
 version = { workspace = true }
 edition = { workspace = true }
 license = { workspace = true }
-description = "Fast and simple 3D collision detection and physics."
+description = "Fast and simple 3D collision queries for games that do their own movement and physics."
 repository = { workspace = true }
 readme = "README.md"
 keywords = ["math", "physics", "geometry", "gamedev", "3d"]
