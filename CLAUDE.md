@@ -43,6 +43,12 @@ default branch, so it has to be true there.
   `-- --baseline before`) and put the numbers in the pull request.
 - Run them on a quiet machine: another busy process inflates every time. `cat /proc/loadavg`
   first.
+- Times of a few nanoseconds move by up to one when unrelated code changes, the formula's too,
+  as the code lands elsewhere in the benchmark: rerun before reading a change that small.
+- To see why a query is slower than the formula, read what it compiles to: a scratch crate
+  that calls it from an `#[inline(never)]` function, built with
+  `cargo rustc --release --lib -- --emit asm`. A call left in it hides which pair it is, so
+  every other pair's code stays, and a branch on a sign mispredicts on random inputs.
 
 ## Design
 
@@ -57,8 +63,8 @@ How performance and edge cases fit together (agent, 28 Nov 2026):
   branch where it can: touching counts as overlapping, and IEEE infinities handle a move
   along an axis. A special case may slow the general path, never the basic pairs. The
   benchmarks check that.
-- A query computes only what it answers: `toi` doesn't look for the exit. Ball–Box2d `toi`
-  breaks this today ([fast casts](backlog/fast-casts.md)).
+- A query computes only what it answers: `toi` doesn't look for the exit. 3D's `toi` breaks
+  this today ([3D casts](backlog/fast-casts.md)).
 - Inputs outside the contract, such as a non-convex polygon or a negative radius, are
   `debug_assert`ed, at no cost in release builds.
 

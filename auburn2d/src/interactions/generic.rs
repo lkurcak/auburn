@@ -11,9 +11,9 @@
 //! vector exactly when `collides` is true, and casts at rest find the shapes overlapping exactly
 //! then too, but for a ball against a polygon, which casts through support functions.
 //!
-//! The formulas are `#[inline]`, as in the casts, and the match on the pair's forms is
-//! `#[inline(always)]`: LLVM keeps it as a call otherwise, and `collides` takes four times as
-//! long.
+//! The formulas are `#[inline]`, as in the casts, and the match on the pair's forms, with the
+//! ways out that it picks for the basic pairs, is `#[inline(always)]`: LLVM keeps it as a call
+//! otherwise, and `collides` takes four times as long.
 
 use crate::Vec2;
 use crate::algorithm::{epa, gjk};
@@ -35,6 +35,7 @@ where
     T1: Transformation2d,
     T2: Transformation2d,
 {
+    #[inline]
     fn collides(&self, other: &Collider<'_, S2, T2>) -> bool {
         match overlaps(&Form::of(self), &Form::of(other)) {
             Some(overlaps) => overlaps,
@@ -106,7 +107,14 @@ fn in_aabb(p: Vec2, half: Vec2) -> bool {
 /// box.
 #[inline]
 pub(super) fn ball_in_rect(centre: Vec2, radius: f32, rect: &Rect) -> bool {
-    let outside = (rect.local(centre).abs() - rect.half).max(Vec2::ZERO);
+    in_rounded_aabb(rect.local(centre), rect.half, radius)
+}
+
+/// Whether a point at `p`, relative to the center of a box of half size `half` that doesn't
+/// turn, is within `radius` of it.
+#[inline]
+pub(super) fn in_rounded_aabb(p: Vec2, half: Vec2, radius: f32) -> bool {
+    let outside = (p.abs() - half).max(Vec2::ZERO);
     outside.length_squared() <= radius * radius
 }
 
@@ -140,8 +148,11 @@ pub(super) fn penetration(a: &Form<'_>, b: &Form<'_>, vel: Vec2) -> (Vec2, f32) 
             let (normal, depth) = ball_rect_penetration(*p, *r, rect);
             (-normal, depth)
         }
-        (Point(p), Rect(rect)) => rect_rect_penetration(&rect.point(*p), rect),
-        (Rect(rect), Point(p)) => rect_rect_penetration(rect, &rect.point(*p)),
+        (Point(p), Rect(rect)) => aligned_penetration(*p, rect.half, rect),
+        (Rect(rect), Point(p)) => {
+            let (normal, depth) = aligned_penetration(*p, rect.half, rect);
+            (-normal, depth)
+        }
         (Rect(r), Rect(s)) => rect_rect_penetration(r, s),
         _ => separating_axes_penetration(a, b),
     }
@@ -149,7 +160,7 @@ pub(super) fn penetration(a: &Form<'_>, b: &Form<'_>, vel: Vec2) -> (Vec2, f32) 
 
 /// How to part a point at `p`, relative to the centre of a ball of `radius` that holds it, by
 /// the shortest move: straight out from the centre, or against `vel` from the centre itself.
-#[inline]
+#[inline(always)]
 fn point_ball_penetration(p: Vec2, radius: f32, vel: Vec2) -> (Vec2, f32) {
     match length_and_direction(p) {
         Some((length, normal)) => (normal, radius - length),
@@ -158,19 +169,26 @@ fn point_ball_penetration(p: Vec2, radius: f32, vel: Vec2) -> (Vec2, f32) {
 }
 
 /// How to part box `a` from box `b`, which it overlaps, by the shortest move.
-#[inline]
+#[inline(always)]
 fn rect_rect_penetration(a: &Rect, b: &Rect) -> (Vec2, f32) {
     if a.rot != b.rot {
         return separating_axes_penetration(&Form::Rect(*a), &Form::Rect(*b));
     }
-    // Out of the box with both half sizes, through its nearest side.
-    let (normal, depth) = out_of_aabb(b.local(a.centre), a.half + b.half);
-    (b.rot * normal, depth)
+    // Out of the box with both half sizes.
+    aligned_penetration(a.centre, a.half + b.half, b)
+}
+
+/// How to part a point at `p` from a box turned as `rect` is, at its center, with half size
+/// `half`, which holds it, by the shortest move: through its nearest side.
+#[inline(always)]
+fn aligned_penetration(p: Vec2, half: Vec2, rect: &Rect) -> (Vec2, f32) {
+    let (normal, depth) = out_of_aabb(rect.local(p), half);
+    (rect.in_world(normal), depth)
 }
 
 /// How to part a ball at `centre` from `rect`, which it overlaps, by the shortest move: out
 /// from the nearest point of the box, or if the centre is in the box, through its nearest side.
-#[inline]
+#[inline(always)]
 fn ball_rect_penetration(centre: Vec2, radius: f32, rect: &Rect) -> (Vec2, f32) {
     let p = rect.local(centre);
     let half = rect.half;
@@ -182,12 +200,12 @@ fn ball_rect_penetration(centre: Vec2, radius: f32, rect: &Rect) -> (Vec2, f32) 
             (normal, radius + depth)
         }
     };
-    (rect.rot * normal, depth)
+    (rect.in_world(normal), depth)
 }
 
 /// The way out of a box of half size `half` that doesn't turn for a point at `p` in it,
 /// relative to its centre: through its nearest side, and how far.
-#[inline]
+#[inline(always)]
 fn out_of_aabb(p: Vec2, half: Vec2) -> (Vec2, f32) {
     nearest([
         (Vec2::X, half.x - p.x),
@@ -216,17 +234,22 @@ fn separating_axes_penetration(a: &Form<'_>, b: &Form<'_>) -> (Vec2, f32) {
 
 /// The way out of `ways`, each a direction and how far to go that way, that goes the least far:
 /// the first of those that go as little.
-#[inline]
+#[inline(always)]
 fn nearest<const N: usize>(ways: [(Vec2, f32); N]) -> (Vec2, f32) {
-    ways.into_iter()
-        .reduce(|best, way| if way.1 < best.1 { way } else { best })
-        .expect("there is a way")
+    // A loop, which LLVM inlines whole, where `reduce` leaves a call.
+    let mut best = ways[0];
+    for way in ways {
+        if way.1 < best.1 {
+            best = way;
+        }
+    }
+    best
 }
 
 /// The length of `v` and its direction, a unit vector, or `None` if it is too short to have a
 /// direction.
-#[inline]
-fn length_and_direction(v: Vec2) -> Option<(f32, Vec2)> {
+#[inline(always)]
+pub(super) fn length_and_direction(v: Vec2) -> Option<(f32, Vec2)> {
     let squared = v.length_squared();
     // A square that neither underflows nor overflows has an accurate root.
     if squared.is_normal() {

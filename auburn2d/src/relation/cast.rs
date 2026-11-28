@@ -103,12 +103,17 @@ pub trait TimeTravelingTimeOfImpactAndExit<T> {
 
 /// Whether a cast at `vel` counts as at rest: every component is too small for its reciprocal
 /// to be finite (zero of either sign, or below about 3e-39).
+#[inline]
 pub(crate) fn is_at_rest(vel: Vec2) -> bool {
-    !(1.0 / vel.abs().max_element()).is_finite()
+    // A compare, which costs less than the division: 2⁻¹²⁸ is the largest such, as its
+    // reciprocal, 2¹²⁸, is past `f32::MAX`. NaN too, as the reciprocal's test has it.
+    let largest = vel.abs().max_element();
+    largest <= f32::from_bits(0x0020_0000) || largest.is_nan()
 }
 
 /// The direction of a `vel` that is not at rest, and its speed. `vel` is scaled to a largest
 /// component of 1 first, so that its squared length can't underflow.
+#[inline]
 pub(crate) fn direction_and_speed(vel: Vec2) -> (Vec2, f32) {
     let largest = vel.abs().max_element();
     let v = vel / largest;
@@ -118,6 +123,7 @@ pub(crate) fn direction_and_speed(vel: Vec2) -> (Vec2, f32) {
 
 /// `v` scaled to length 1, or `None` if it is too short to have a direction. It is scaled to a
 /// largest component of 1 first, so that its squared length can't underflow.
+#[inline]
 pub(crate) fn unit(v: Vec2) -> Option<Vec2> {
     let largest = v.abs().max_element();
     if !(1.0 / largest).is_finite() {
@@ -128,6 +134,7 @@ pub(crate) fn unit(v: Vec2) -> Option<Vec2> {
 }
 
 /// The normal where every direction fits: against `vel`, or +x at rest.
+#[inline]
 pub(crate) fn against(vel: Vec2) -> Vec2 {
     unit(-vel).unwrap_or(Vec2::X)
 }
@@ -150,5 +157,34 @@ pub(crate) mod from_span {
 
     pub fn tttoiae(span: Option<(f32, f32)>) -> Option<(f32, f32)> {
         span
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_at_rest;
+    use crate::Vec2;
+
+    /// The compare agrees with the definition, that the reciprocal isn't finite, on either sign
+    /// of the subnormals up to twice 2⁻¹²⁸ and of some larger numbers.
+    #[test]
+    fn at_rest_is_where_the_reciprocal_is_not_finite() {
+        let larger = [f32::MIN_POSITIVE, 1e-30, 1.0, f32::MAX, f32::INFINITY];
+        let small = (0..0x0040_0000_u32).map(f32::from_bits);
+        for x in small.chain(larger) {
+            for x in [x, -x] {
+                let reciprocal_is_finite = (1.0 / x).is_finite();
+                assert_eq!(
+                    is_at_rest(Vec2::new(x, 0.0)),
+                    !reciprocal_is_finite,
+                    "{x:e}"
+                );
+                assert_eq!(
+                    is_at_rest(Vec2::new(0.0, x)),
+                    !reciprocal_is_finite,
+                    "{x:e}"
+                );
+            }
+        }
     }
 }
