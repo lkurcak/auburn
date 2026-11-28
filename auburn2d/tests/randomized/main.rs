@@ -50,6 +50,9 @@ macro_rules! query {
     (TtToiae) => {
         |a, b, v| Hit::Span(a.tttoiae(b, v))
     };
+    (Cast) => {
+        |a, b, v| Hit::Contact(a.cast(b, v), a.toi(b, v))
+    };
 }
 
 /// `cast_test!(name: Kind @ T, config, [A-B, ...])` checks the cast `Kind` on each pair, with
@@ -356,4 +359,9 @@ mod tttoi {
 mod tttoiae {
     use super::*;
     cast_tests!(TtToiae);
+}
+
+mod cast {
+    use super::*;
+    cast_tests!(Cast);
 }

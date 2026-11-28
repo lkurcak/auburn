@@ -2,9 +2,8 @@
 
 ## Now
 
-1. Cast result in 2D, with time, hit normal and contact point. `CastResult` is commented out
-   in `auburn2d/src/relation/cast.rs`; sliding along walls needs the normal.
-1. The same cast result in 3D.
+1. The same cast result in 3D: `a.cast(&b, vel)` and `CastHit`, as 2D has them (#37), with the
+   randomized check against the true contact.
 1. `move_and_slide` helper for kinematic characters. Needs the cast result.
 
 ## Later
@@ -33,14 +32,15 @@
   convert only when the scale is 1.
 - With `--all-features`, cargo warns that the optional `glam` dependency is unused in both crates,
   because bevy's `Vec3` wins (cargo's `unused_dependencies` lint).
-- Bring 3D's ray cast fixes to 2D's `shape_cast`: balls as a centre and a radius
-  (`rounded_shape_cast`), and a hit test that allows for the angle the ray meets the set at.
-  Ball–Poly2d still goes through it and passes at 200×. Before Ball–Box2d got an exact cast,
-  it got 1 turned Ball–Box2d case in 6 000 wrong at huge sizes, at 20×: an exit 1% late.
+- 2D cast hits through support functions alone, with no ball to round by, as for a ball
+  under an uneven bevy scale or a custom curved shape: the normal comes from the ray cast's
+  last separating line, so at a curved contact it can be off by about the square root of the
+  cast's tolerance. The randomized suite samples no such shape.
 - [3D `shape_cast` takes near-misses for grazes](backlog/ray-cast-near-miss.md).
 
 ## Done
 
+- 2D `a.cast(&b, vel)` gives a `CastHit`: `toi`'s time, the contact's normal and a point where the shapes touch, or the shortest way out if they overlap already; exact for the pairs with formulas. Balls go through 3D's ray cast as a centre and a radius, which settles on the nearest point. The playground draws the hit (#37)
 - The root README's CI badge points at `ci.yml`, the workflow that runs, instead of `rust.yml`, whose badge 404'd (#36)
 - Playground online at <https://lkurcak.github.io/auburn/>, linked from the READMEs: `pages.yml` builds it for the browser on pull requests and publishes it from main (#35)
 - Playground (`cargo run -p auburn-playground`, or `trunk serve` in `playground/`): drag a point, a ball, a box and a polygon, see each query's answers and ghosts, copy a pair as a test, and keep the scene in the page's URL (#34)
@@ -50,4 +50,3 @@
 - 2D casts without an exact formula, Ball–Poly2d so far, read the overlap's span off one GJK ray cast, `algorithm::shape_cast`: they no longer stop at t = 1 or stall, exit times are exact and time-traveling ones go below 0; conservative advancement is gone from 2D (#30)
 - 2D bevy `Transform` uses its own x and y scale on the plane z = 0, so uneven scales and mirrors work and z no longer leaks in; `inverse` is the matrix inverse in 2D and 3D, and converting to `Transform2d`/`Transform3d` keeps an even scale exactly (#29)
 - `From<ScaleTranslate2d> for bevy Isometry2d` is gone: its body was `todo!()`, so it could only panic (#28)
-- `Poly2d` casts are one swept SAT that ignores winding and has no absolute tolerances, so tiny and clockwise polygons work; `regular` is counter-clockwise, `area` works, an empty polygon is a point at its origin, and debug builds check convexity (#27)

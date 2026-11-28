@@ -20,16 +20,18 @@ pub enum Query {
     Toiae,
     Tttoi,
     Tttoiae,
+    Cast,
 }
 
 impl Query {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::Collides,
         Self::Penetrates,
         Self::Toi,
         Self::Toiae,
         Self::Tttoi,
         Self::Tttoiae,
+        Self::Cast,
     ];
 
     /// The method's name, as in `a.toi(&b, vel)`.
@@ -41,6 +43,7 @@ impl Query {
             Self::Toiae => "toiae",
             Self::Tttoi => "tttoi",
             Self::Tttoiae => "tttoiae",
+            Self::Cast => "cast",
         }
     }
 
@@ -56,6 +59,11 @@ impl Query {
                  negative if that was in the past."
             }
             Self::Tttoiae => "When it starts and stops overlapping the other, over all of time.",
+            Self::Cast => {
+                "When the moving shape first touches the other, from now on, the normal out of \
+                 the other there, and a point where they touch. If they overlap already, the \
+                 shortest way out."
+            }
         }
     }
 
@@ -208,6 +216,7 @@ pub enum Answer {
     Penetrates(Option<Vec2>),
     Time(Option<f32>),
     Span(Option<(f32, f32)>),
+    Hit(Option<CastHit>),
     /// The query panicked, with this message.
     Panicked(String),
 }
@@ -220,6 +229,7 @@ impl Answer {
             Self::Penetrates(push) => push.is_some(),
             Self::Time(t) => t.is_some(),
             Self::Span(span) => span.is_some(),
+            Self::Hit(hit) => hit.is_some(),
             Self::Panicked(_) => false,
         }
     }
@@ -236,7 +246,13 @@ impl Answer {
             Self::Penetrates(Some(push)) => some(vec2(push)),
             Self::Time(Some(t)) => some(lit(t)),
             Self::Span(Some((entry, exit))) => some(format!("({}, {})", lit(entry), lit(exit))),
-            Self::Penetrates(None) | Self::Time(None) | Self::Span(None) => {
+            Self::Hit(Some(hit)) => some(format!(
+                "CastHit {{ time: {}, normal: {}, point: {} }}",
+                lit(hit.time),
+                vec2(hit.normal),
+                vec2(hit.point)
+            )),
+            Self::Penetrates(None) | Self::Time(None) | Self::Span(None) | Self::Hit(None) => {
                 "assert!(r.is_none(), \"{r:?}\");".into()
             }
             Self::Panicked(_) => unreachable!("a panic has no assertion"),
@@ -252,6 +268,7 @@ impl fmt::Display for Answer {
             Self::Penetrates(push) => write!(f, "{push:?}"),
             Self::Time(t) => write!(f, "{t:?}"),
             Self::Span(span) => write!(f, "{span:?}"),
+            Self::Hit(hit) => write!(f, "{hit:?}"),
             Self::Panicked(message) => write!(f, "panicked: {message}"),
         }
     }
@@ -453,6 +470,7 @@ where
         Query::Toiae => Answer::Span(a.toiae(b, vel)),
         Query::Tttoi => Answer::Time(a.tttoi(b, vel)),
         Query::Tttoiae => Answer::Span(a.tttoiae(b, vel)),
+        Query::Cast => Answer::Hit(a.cast(b, vel)),
     }
 }
 
@@ -599,6 +617,15 @@ mod tests {
         let cases = [
             (Answer::Collides(false), "assert!(!r);"),
             (Answer::Time(None), "assert!(r.is_none(), \"{r:?}\");"),
+            (
+                Answer::Hit(Some(CastHit {
+                    time: 0.5,
+                    normal: Vec2::NEG_X,
+                    point: Vec2::new(3.0, -1.0),
+                })),
+                "assert_eq!(r, Some(CastHit { time: 0.5, normal: Vec2::new(-1.0, 0.0), \
+                 point: Vec2::new(3.0, -1.0) }));",
+            ),
             (
                 Answer::Span(Some((f32::NEG_INFINITY, 1e-7))),
                 "assert_eq!(r, Some((f32::NEG_INFINITY, 1e-7)));",

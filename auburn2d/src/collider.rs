@@ -117,6 +117,37 @@ impl<'a, S: Shape, I: Transformation2d> Collider<'a, S, I> {
         crate::relation::cast::TimeOfImpact::toi(self, other, vel)
     }
 
+    /// When and how this collider first touches `other` from now on, moving at `vel`: the
+    /// time, as [`toi`](Self::toi) gives it, the contact's normal, out of `other`, and a point
+    /// where they touch. `None` if they never do. See [`CastHit`](crate::relation::cast::CastHit).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use auburn2d::prelude::*;
+    /// use auburn2d::Vec2;
+    ///
+    /// // A ball moving right at 2 meets a wall whose left side is at x = 3.
+    /// let ball = Ball::new(1.0);
+    /// let wall = Box2d::new(Vec2::new(1.0, 5.0));
+    /// let (ball_at, wall_at) = (Vec2::ZERO, Vec2::new(4.0, 0.0));
+    /// let vel = Vec2::new(2.0, 1.0);
+    /// let hit = ball.at(&ball_at).cast(&wall.at(&wall_at), vel).unwrap();
+    /// assert_eq!(hit.time, 1.0);
+    /// assert_eq!(hit.normal, Vec2::NEG_X);
+    /// assert_eq!(hit.point, Vec2::new(3.0, 1.0));
+    ///
+    /// // Sliding along the wall keeps what of `vel` doesn't go into it.
+    /// let slide = vel - hit.normal * vel.dot(hit.normal);
+    /// assert_eq!(slide, Vec2::new(0.0, 1.0));
+    /// ```
+    pub fn cast<T>(&self, other: &T, vel: Vec2) -> Option<crate::relation::cast::CastHit>
+    where
+        Self: crate::relation::cast::Cast<T>,
+    {
+        crate::relation::cast::Cast::cast(self, other, vel)
+    }
+
     /// Time Traveling Time of Impact (TTTOI).
     /// Similar to `toi`, but handles cases where objects might already be overlapping or starting in a collision state differently.
     pub fn tttoi<T>(&self, other: &T, vel: Vec2) -> Option<f32>

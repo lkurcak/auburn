@@ -56,6 +56,22 @@ where
     F1: Fn(Vec2) -> Vec2,
     F2: Fn(Vec2) -> Vec2,
 {
+    penetration(initial_simplex, support_a, support_b)
+        .map_or(Vec2::ZERO, |(normal, depth)| normal * depth)
+}
+
+/// [`epa`]'s direction, as a unit vector, and the depth along it, kept apart so that the
+/// direction is there for shapes that only touch. `None` where GJK's simplex doesn't have a
+/// direction: a single point, or three on a line, which happens only for shapes that touch.
+pub(crate) fn penetration<F1, F2>(
+    initial_simplex: Simplex,
+    support_a: F1,
+    support_b: F2,
+) -> Option<(Vec2, f32)>
+where
+    F1: Fn(Vec2) -> Vec2,
+    F2: Fn(Vec2) -> Vec2,
+{
     // Minkowski difference support function, and the size of its world coordinates
     let support = |dir: Vec2| -> (Vec2, f32) {
         let (a, b) = (support_a(dir), support_b(-dir));
@@ -64,7 +80,7 @@ where
 
     // GJK only returns fewer points when its first one is the origin: the shapes touch.
     if initial_simplex.count() < 3 {
-        return Vec2::ZERO;
+        return None;
     }
     let mut vertices: Vec<Vec2> = (0..3).map(|i| initial_simplex.get(i)).collect();
 
@@ -74,7 +90,7 @@ where
     if orientation == 0.0 || orientation.is_nan() {
         // Flat. GJK finds the last corner past the origin, off the others' line, unless the
         // origin is on the Minkowski difference's boundary: the shapes touch.
-        return Vec2::ZERO;
+        return None;
     }
     if orientation < 0.0 {
         vertices.swap(1, 2);
@@ -90,7 +106,7 @@ where
 
     // The closest edge's distance is a lower bound on the penetration depth, and the support
     // point in its direction an upper one. EPA stops when they meet.
-    let mut best = Vec2::ZERO;
+    let mut best = None;
     let mut best_depth = f32::INFINITY;
 
     for _ in 0..EPA_MAX_ITERATIONS {
@@ -103,7 +119,7 @@ where
         let depth = point.dot(edge.normal);
         if depth < best_depth {
             best_depth = depth;
-            best = edge.normal * depth;
+            best = Some((edge.normal, depth));
         }
 
         if best_depth - edge.distance <= relative_tolerance.max(EPA_ROUNDING_TOLERANCE * world) {
