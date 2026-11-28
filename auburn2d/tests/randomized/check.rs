@@ -2,7 +2,7 @@
 //! type and compares the library with the ground truth.
 
 use crate::sample::{Config, Place, Rng, Sample, velocity, wide};
-use crate::truth::Truth;
+use crate::truth::{Geometry, Truth, contact, depth_of};
 use auburn2d::prelude::*;
 use glam::DVec2;
 use std::fmt::Write;
@@ -217,12 +217,13 @@ pub enum Kind {
     TtToi,
     Toiae,
     TtToiae,
+    Cast,
 }
 
 impl Kind {
     /// Whether the query only looks forward in time.
     fn bounded(self) -> bool {
-        matches!(self, Kind::Toi | Kind::Toiae)
+        matches!(self, Kind::Toi | Kind::Toiae | Kind::Cast)
     }
 }
 
@@ -231,6 +232,57 @@ impl Kind {
 pub enum Hit {
     Time(Option<f32>),
     Span(Option<(f32, f32)>),
+    /// `cast`'s hit, and the time `toi` gives, which should be the hit's.
+    Contact(Option<CastHit>, Option<f32>),
+}
+
+impl Hit {
+    /// The hit's time, as `Time` has it, for `Contact`.
+    fn time(self) -> Option<Option<f32>> {
+        match self {
+            Hit::Contact(hit, _) => Some(hit.map(|hit| hit.time)),
+            _ => None,
+        }
+    }
+}
+
+/// Why `hit` doesn't touch the way it says, if it doesn't: its normal is a unit vector out of
+/// `b`, and once `a` has moved to where they touch, the line across it through `point` keeps
+/// them apart, and `point` is on both. Where they overlap at time 0, `a` moves out along the
+/// normal by the depth: if the normal isn't the shortest way out, they still overlap then, and
+/// no line across it keeps them apart.
+fn contact_error(
+    hit: CastHit,
+    vel: Vec2,
+    truth: &Truth,
+    (a, b): (&Geometry, &Geometry),
+    slack: f64,
+) -> Option<String> {
+    let n = wide(hit.normal);
+    if !hit.point.is_finite() || (n.length() - 1.0).abs() > 1e-5 {
+        return Some(format!("normal of length {}", n.length()));
+    }
+    let shift = if hit.time > 0.0 {
+        wide(vel) * f64::from(hit.time)
+    } else {
+        n * truth.depth(DVec2::ZERO).max(0.0)
+    };
+    let gap = truth.gap(n, shift);
+    let p = wide(hit.point);
+    let moved = Geometry {
+        points: a.points.iter().map(|&q| q + shift).collect(),
+        radius: a.radius,
+    };
+    let (in_a, in_b) = (depth_of(p, &moved), depth_of(p, b));
+    // Where a point or a ball touches, only one point will do.
+    let off = contact(&moved, b).map_or(0.0, |q| (p - q).length());
+    (gap < -slack || in_a < -slack || in_b < -slack || off > slack).then(|| {
+        format!(
+            "the line across the normal cuts {:.3e} into them, the point is {:.3e} outside a \
+             and {:.3e} outside b, and {off:.3e} from where they touch",
+            -gap, -in_a, -in_b
+        )
+    })
 }
 
 fn close(got: f32, want: f64, slack: f64) -> bool {
@@ -269,18 +321,20 @@ pub fn cast<A: Sample, B: Sample, TA: Place, TB: Place>(
         }
         out.cases += 1;
         let want = match kind {
-            Kind::Toi | Kind::Toiae => sweep
+            Kind::Toi | Kind::Toiae | Kind::Cast => sweep
                 .overlap
                 .filter(|&(_, exit)| exit >= 0.0)
                 .map(|(entry, exit)| (entry.max(0.0), exit)),
             Kind::TtToi | Kind::TtToiae => sweep.overlap,
         };
+        let time = |t: Option<f32>| match (t, want) {
+            (None, None) => true,
+            (Some(t), Some((entry, _))) => close(t, entry, slack),
+            _ => false,
+        };
+        let mut error = None;
         let ok = match got {
-            Hit::Time(t) => match (t, want) {
-                (None, None) => true,
-                (Some(t), Some((entry, _))) => close(t, entry, slack),
-                _ => false,
-            },
+            Hit::Time(t) => time(t),
             Hit::Span(span) => match (span, want) {
                 (None, None) => true,
                 (Some((entry, exit)), Some((want_entry, want_exit))) => {
@@ -288,11 +342,17 @@ pub fn cast<A: Sample, B: Sample, TA: Place, TB: Place>(
                 }
                 _ => false,
             },
+            Hit::Contact(hit, toi) => {
+                let shapes = (&s.a.geometry(&s.ta), &s.b.geometry(&s.tb));
+                error = hit.and_then(|hit| contact_error(hit, vel, &s.truth(), shapes, tol));
+                time(toi) && got.time() == Some(toi) && error.is_none()
+            }
         };
         if !ok {
             out.fail(format!(
-                "{}, vel = {vel:?}: got {got:?}, want (entry, exit) = {want:?}",
-                s.describe()
+                "{}, vel = {vel:?}: got {got:?}, want (entry, exit) = {want:?}{}",
+                s.describe(),
+                error.map_or(String::new(), |e| format!(": {e}"))
             ));
         }
     }
@@ -328,14 +388,21 @@ pub fn cast_at_rest<A: Sample, B: Sample, TA: Place, TB: Place>(
             f32::NEG_INFINITY
         };
         let want = (depth > 0.0).then_some((entry, f32::INFINITY));
+        let mut error = None;
         let ok = match got {
             Hit::Time(t) => t == want.map(|(entry, _)| entry),
             Hit::Span(span) => span == want,
+            Hit::Contact(hit, toi) => {
+                let shapes = (&s.a.geometry(&s.ta), &s.b.geometry(&s.tb));
+                error = hit.and_then(|hit| contact_error(hit, vel, &s.truth(), shapes, tol));
+                toi == want.map(|(entry, _)| entry) && got.time() == Some(toi) && error.is_none()
+            }
         };
         if !ok {
             out.fail(format!(
-                "{}, vel = {vel:?}: got {got:?}, depth {depth:.6}",
-                s.describe()
+                "{}, vel = {vel:?}: got {got:?}, depth {depth:.6}{}",
+                s.describe(),
+                error.map_or(String::new(), |e| format!(": {e}"))
             ));
         }
     }

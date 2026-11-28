@@ -301,6 +301,8 @@ impl App {
                     "Double-click a shape to make it the moving one.",
                     "Ghosts show the moving shape when it enters (green) and exits (red), \
                      or pushed out (purple).",
+                    "A cast's hit shows where the shapes touch, and the normal out of the \
+                     other shape there (purple).",
                 ] {
                     ui.label(line);
                 }
@@ -429,6 +431,16 @@ impl App {
                 painter.text(at, Align2::CENTER_CENTER, format!("{t:.3}"), font, color);
             }
         };
+        // Under the answers, so that it doesn't hide a hit's normal.
+        if scene.query.is_cast() {
+            painter.arrow(
+                origin,
+                self.view.screen_vec(scene.vel),
+                Stroke::new(2.0, MOVING),
+            );
+            let tip = self.view.screen(rect, moving.pos + scene.vel);
+            painter.circle_filled(tip, 5.0, MOVING);
+        }
         for (_, answer) in &answers {
             match *answer {
                 Answer::Penetrates(Some(push)) => {
@@ -440,17 +452,16 @@ impl App {
                     ghost(entry * scene.vel, ENTRY, Some(entry));
                     ghost(exit * scene.vel, EXIT, Some(exit));
                 }
+                Answer::Hit(Some(hit)) => {
+                    ghost(hit.time * scene.vel, ENTRY, Some(hit.time));
+                    // The normal at a length that doesn't depend on the zoom.
+                    let at = self.view.screen(rect, hit.point);
+                    let normal = self.view.screen_vec(hit.normal).normalized() * 36.0;
+                    painter.arrow(at, normal, Stroke::new(2.0, PUSH));
+                    painter.circle_filled(at, 4.0, PUSH);
+                }
                 _ => {}
             }
-        }
-        if scene.query.is_cast() {
-            painter.arrow(
-                origin,
-                self.view.screen_vec(scene.vel),
-                Stroke::new(2.0, MOVING),
-            );
-            let tip = self.view.screen(rect, moving.pos + scene.vel);
-            painter.circle_filled(tip, 5.0, MOVING);
         }
 
         let selected = &scene.bodies[self.selected];

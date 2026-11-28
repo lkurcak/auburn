@@ -13,11 +13,14 @@
 //! Each gives `None` if the shapes never touch: from now on for `toi` and `toiae`, and ever for
 //! the time-traveling ones.
 //!
+//! [`Cast::cast`] gives the same time as `toi`, with how the shapes touch then: the contact's
+//! normal, and a point where they touch. See [`CastHit`].
+//!
 //! # At rest
 //!
 //! A cast at zero velocity leaves the shapes where they are. If they overlap, they overlap
-//! forever: `toi` gives 0, `toiae` gives (0, ∞), `tttoi` gives −∞ and `tttoiae` gives (−∞, ∞).
-//! If they don't, all four give `None`. A velocity counts as zero when every component is too
+//! forever: `toi` gives 0, `toiae` gives (0, ∞), `tttoi` gives −∞ and `tttoiae` gives (−∞, ∞),
+//! and `cast` gives a hit at 0. If they don't, all five give `None`. A velocity counts as zero when every component is too
 //! small for its reciprocal to be finite: zero of either sign, or below about 3e-39.
 //!
 //! # Points
@@ -26,8 +29,42 @@
 //! [`Collides`](crate::relation::collides::Collides). A point that moves through another one
 //! enters and exits it at the same time, and one that misses it, by more than rounding, gives
 //! `None`.
+//!
+//! # Contact normals
+//!
+//! Where shapes touch at a corner, more than one normal fits, and a cast's normal is one of
+//! them. Where every direction fits, as for two points, it is against `vel`, or +x at rest.
 
 use crate::Vec2;
+
+/// Where and when a cast first touches: see [`Cast::cast`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CastHit {
+    /// When the shapes first touch, from now on (`t >= 0`): 0 if they overlap already, as
+    /// [`TimeOfImpact::toi`] gives it.
+    pub time: f32,
+    /// The contact's normal at `time`: a unit vector out of the other shape, towards the
+    /// moving one, so moving that one along it parts them.
+    ///
+    /// If they overlap already, it is the way that parts them by the shortest move, as
+    /// [`Penetrates`](crate::relation::penetrates::Penetrates) gives it, and for shapes that
+    /// only touch, the normal where they touch.
+    pub normal: Vec2,
+    /// A point where the shapes touch at `time`, in world space.
+    ///
+    /// If they overlap already, where they would touch once the moving shape had moved out
+    /// along `normal`: a point on the other shape's boundary.
+    pub point: Vec2,
+}
+
+pub trait Cast<T> {
+    /// When and how the shapes first touch from now on, with `self` moving at `vel`, or
+    /// `None` if they never do.
+    ///
+    /// The time is [`TimeOfImpact::toi`]'s: 0 if they overlap already. See [`CastHit`] for the
+    /// normal and the point, and [the module](self) for the conventions.
+    fn cast(&self, other: &T, vel: Vec2) -> Option<CastHit>;
+}
 
 pub trait TimeOfImpact<T> {
     /// The first time from now (`t >= 0`) at which the shapes touch, with `self` moving at
@@ -79,6 +116,22 @@ pub(crate) fn direction_and_speed(vel: Vec2) -> (Vec2, f32) {
     (v / length, length * largest)
 }
 
+/// `v` scaled to length 1, or `None` if it is too short to have a direction. It is scaled to a
+/// largest component of 1 first, so that its squared length can't underflow.
+pub(crate) fn unit(v: Vec2) -> Option<Vec2> {
+    let largest = v.abs().max_element();
+    if !(1.0 / largest).is_finite() {
+        return None;
+    }
+    let v = v / largest;
+    Some(v / v.length())
+}
+
+/// The normal where every direction fits: against `vel`, or +x at rest.
+pub(crate) fn against(vel: Vec2) -> Vec2 {
+    unit(-vel).unwrap_or(Vec2::X)
+}
+
 /// The four casts' answers from `span`, the times between which the shapes overlap over all of
 /// time (`None` if never).
 pub(crate) mod from_span {
@@ -99,32 +152,3 @@ pub(crate) mod from_span {
         span
     }
 }
-
-/*
-#[derive(Default, Debug, Clone)]
-pub struct CastResult {
-    /// Time of impact
-    pub toi: f32,
-    /// Time of exit
-    pub toe: f32,
-    /// Normal of the impact
-    pub noi: Vec2,
-    /// Normal of the exit
-    pub noe: Vec2,
-    /// Point of impact
-    pub poi: Vec2,
-    /// Point of exit
-    pub poe: Vec2,
-}
-
-pub trait Cast<T> {
-    /// Casts the object in the direction of the given vector until it collides with another
-    /// object.
-    ///
-    /// Returns the "time of impact", which can be multiplied by `vel` to get the distance
-    /// traveled.
-    ///
-    /// For more information see [`TimeOfImpact::toi`].
-    fn cast(&self, other: &T, vel: Vec2) -> Option<CastResult>;
-}
-*/

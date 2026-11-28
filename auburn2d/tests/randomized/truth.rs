@@ -61,6 +61,20 @@ impl Truth {
         self.radius - self.signed_distance(-offset)
     }
 
+    /// How far apart the line across the unit vector `n` keeps the shapes, once the first is
+    /// translated by `offset`: negative if it can't, by as much as the line cuts into them.
+    /// The first shape is on the side `n` points to.
+    pub fn gap(&self, n: DVec2, offset: DVec2) -> f64 {
+        // The least of `p.dot(n)` over the Minkowski difference, which the first shape's
+        // translation adds to.
+        let least = self
+            .hull
+            .iter()
+            .map(|p| p.dot(n))
+            .fold(f64::INFINITY, f64::min);
+        least - self.radius + offset.dot(n)
+    }
+
     /// Signed distance from `x` to the hull; negative inside.
     fn signed_distance(&self, x: DVec2) -> f64 {
         let h = &self.hull;
@@ -123,6 +137,48 @@ impl Truth {
             overlap: Some((crossing(-horizon, deepest), crossing(horizon, deepest))),
         }
     }
+}
+
+/// How far `p` is inside `shape`: negative outside it.
+pub fn depth_of(p: DVec2, shape: &Geometry) -> f64 {
+    let point = Geometry {
+        points: vec![p],
+        radius: 0.0,
+    };
+    Truth::new(&point, shape).depth(DVec2::ZERO)
+}
+
+/// Where touching shapes touch, if that is a single point, as it is when either is a point or a
+/// ball: a single point with a radius.
+pub fn contact(a: &Geometry, b: &Geometry) -> Option<DVec2> {
+    // From the point of `core`'s hull nearest to `centre`, out towards it by `radius`.
+    let towards = |core: &Geometry, centre: DVec2, radius: f64| {
+        let q = nearest_on_hull(&core.points, centre);
+        q + (centre - q).normalize_or_zero() * radius
+    };
+    match (a.points.as_slice(), b.points.as_slice()) {
+        (_, &[centre]) => Some(towards(b, nearest_on_hull(&a.points, centre), b.radius)),
+        (&[centre], _) => Some(towards(b, centre, b.radius)),
+        _ => None,
+    }
+}
+
+/// The point of the convex polygon through `points` nearest to `x`, which is outside it or on
+/// its boundary.
+fn nearest_on_hull(points: &[DVec2], x: DVec2) -> DVec2 {
+    let n = points.len();
+    (0..n)
+        .map(|i| nearest_on_segment(x, points[i], points[(i + 1) % n]))
+        .min_by(|p, q| (*p - x).length().total_cmp(&(*q - x).length()))
+        .expect("a shape has points")
+}
+
+fn nearest_on_segment(x: DVec2, a: DVec2, b: DVec2) -> DVec2 {
+    let ab = b - a;
+    if ab == DVec2::ZERO {
+        return a;
+    }
+    a + ab * ((x - a).dot(ab) / ab.length_squared()).clamp(0.0, 1.0)
 }
 
 fn cross(o: DVec2, a: DVec2, b: DVec2) -> f64 {
