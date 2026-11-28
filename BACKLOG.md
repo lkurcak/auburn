@@ -54,6 +54,7 @@
 
 ## Done
 
+- What auburn is for, under Decisions in `CLAUDE.md`, with a Design section on performance and edge cases; Now starts with benchmarks and exact `collides`/`penetrates`; the descriptions say collision queries for games that do their own movement and physics (#38)
 - 2D `a.cast(&b, vel)` gives a `CastHit`: `toi`'s time, the contact's normal and a point where the shapes touch, or the shortest way out if they overlap already; exact for the pairs with formulas. Balls go through 3D's ray cast as a centre and a radius, which settles on the nearest point. The playground draws the hit (#37)
 - The root README's CI badge points at `ci.yml`, the workflow that runs, instead of `rust.yml`, whose badge 404'd (#36)
 - Playground online at <https://lkurcak.github.io/auburn/>, linked from the READMEs: `pages.yml` builds it for the browser on pull requests and publishes it from main (#35)
